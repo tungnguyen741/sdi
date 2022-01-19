@@ -8,11 +8,11 @@ Hành trình vạn dặm nào cũng bắt đầu từ những bước đi đầu
 
 ![server-setup](./assets/server-setup-1.png)
 
-Để hiểu thiết lập này, sẽ hữu ích khi khám phá luồng yêu cầu là nguồn lưu lượng truy cập. Trước tiên ta sẽ xem luồng yêu cầu.
+Để hiểu thiết lập này, ta sẽ tìm hiểu về luồng yêu cầu và nguồn lưu lượng truy cập. Trước tiên ta sẽ xem luồng yêu cầu.
 
 ![server-setup](./assets/server-setup-2.png)
 
-1. Người dùng truy cập vào website thông qua tên miền, vd như api.mysite.com. Tên miền của trang web được cung cấp từ DNS, DNS (Domain Name System) là dịch vụ trả phí bên thứ 3 giúp cung cấp tên miền và không được lưu trữ trên server của ta.
+1. Người dùng truy cập vào website thông qua tên miền, vd như api.mysite.com. Tên miền của trang web được cung cấp từ DNS, DNS (Domain Name System) là dịch vụ trả phí bên thứ 3 giúp cung cấp tên miền và nó không được lưu trữ trên server của ta.
 2. Địa chỉ Internet Protocol (IP) được trả về từ trình duyệt hoặc ứng dụng di động. Trong ví dụ: địa chỉ IP được trả về là 15.125.23.214.
 3. Sau khi có được địa chỉ IP, Giao thức truyền tải siêu văn bản (HTTP) sẽ được gửi trực tiếp đến web server của bạn.
 4. Web server trả về trang HTML hoặc JSON trong trích xuất phản hồi.
@@ -119,3 +119,54 @@ SECONDS = 1
 cache.set('myKey', 'hi there', 3600 * SECONDS)
 cache.get('myKey)
 ```
+
+Các vấn đề khi sử dụng cache:
+- Quyết định khi nào sử dụng cache. Cân nhắc sử dụng cache khi thường xuyên đọc dữ liệu và ít chỉnh sửa. Vì dữ liệu cache được lưu trữ ở bộ nhớ không ổn định, server cache không phải ý tưởng tốt cho dữ liệu lâu dài. Ví dụ, nếu một server cache khởi động lại, tất cả dữ liệu sẽ bị mất, do đó dữ liệu quan trọng nên được lưu trữ ở bộ nhớ dài lâu.
+- Chính sách hết hạn. Mỗi làn dữ liệu cache hết hạn, nó sẽ bị xoá khỏi cache. Khi không có chính sách hết hạn, dữ liệu được lưu trong cache sẽ được lưu vĩnh viễn. Lời khuyên là đừng để ngày hết hạn quá ngắn vì hệ thống phải tải dữ liệu từ cơ sở dữ liệu nhiều lần. Bên cạnh đó cũng không nên đặt ngày hết hạn quá lâu vì dữ liệu có thể cũ.
+- Tính nhất quán: liên quan đến việc giữ dữ liệu lưu trữ và cache đồng bộ. Không nhất quán có thể xảy ra khi thao tác chỉnh sửa dữ liệu trong cơ sở dữ liệu và cache không nằm trong một giao dịch đơn nhất. Khi mở rộng trên nhiều khu vực địa lý, duy trì tính nhất quán giữa cơ sở dữ liệu và cache là một thử thách.  Chỉ tiến hơn đọc bài "Scaling Memcache ở Facebook"
+- Giảm thiểu thất bại: Một server cache duy nhất có thể là một SPOF (single point of failure), điểm lỗi tiềm ẩn. Theo định nghĩa từ Wikipedia: "Một điểm lỗi duy nhất (SPOF) là một phần của hệ thống, nếu nó bị lỗi, toàn bộ hệ thống sẽ ngừng hoạt động". Như vậy, nhiều server cache trên các data center khác nhau sẽ tránh được SPOF. Một cách tiếp cận khác là cung cấp quá mức bộ nhớ cần thiết theo tỷ lệ phần trăm nhất định, điều này cung cấp một bộ đệm khi mức sử dụng bộ nhớ tăng lên.
+
+![failure](./assets/failure.png)
+
+- Chính sách loại bỏ. Khi bộ nhớ cache đầy, bất kỳ yêu cầu nào để thêm vào bộ nhớ cache có thể khiến các mục dữ liệu hiện tại trong cache bị xoá. Đây được gọi là cache eviction. LRU (Least recently-used) là chính sách phổ biến để xoá cache. Các chính sách khác ít được sử dựng như LFU, FIFO có thể được áp dụng có các mục đích sử dụng và trường hợp khác nhau.
+
+## CDN
+
+Một CDN là một mạng lưới máy chỉ phân tán theo khu vực địa lý được dùng để phân phối nội dung tĩnh. Nội dung tĩnh có thể là hình ảnh, video, file CSS, file JS,...
+
+Caching nội dụng động là một khái niệm mới và nằm ngoài phạm vi bài viết này. Nó cho phép lưu vào cache của trang HTML dựa trên đường dẫn yêu cầu, chuỗi truy vấn, cookie và header của yêu cầu. Muốn biết thêm hãy tham khảo tài liệu ở cuối bài viết. Bây giờ ta quay lại caching nội dụng tĩnh với CDN.
+
+Làm thế nào CDN làm việc ở high-level: khi một người dùng vào website, server CDN gân với người dùng nhất sẽ phân phối nội dung tĩnh. Tức, người dùng càng ở xa server CDN, thì tải web càng chậm. Ví dụ, các server CDN ở San Francisco, còn người dùng ở Los Angeles sẽ nhận nội dung nhanh hơn người dùng ở châu Âu. Hình bên dưới mô tả cách CDN cải thiện tốc độ tải.
+
+![cdn](./assets/cdn-1.png)
+
+Hình minh hoạ luồng làm việc của CDN
+
+![cdn](./assets/cdn-2.png)
+
+1. Khi người dùng lấy `image.png` bằng cách dùng URL của ảnh. Tên miền của URL được cung cấp bởi CDN. Hai URL ảnh sao cùng được dùng để minh hoạ cách URL của ảnh trên trang Amazon và trên Akamai CDN:
+- https://mysite.cloudfront.net/logo.jpg
+- https://mysite.akamai.com/image-manager/img/logo.jpg
+2. Nếu server CDN không có image.png trong cache, nó sẽ yêu cầu file từ một web server gốc hoặc bộ lưu trữ trực tuyến như Amazon S3.
+3. Bên gốc trả về `image.png` cho server CDN, bao gồm cả header HTTP là Time-to-Live để mô tả thời gian sống của ảnh trong cache.
+4. CDN lưu ảnh vào cache và trả về cho người dùng A. Ảnh sẽ ở trong cache cho đến khi TTL hết hạn.
+5. Người dùng B gửi yêu cầu đến cùng ảnh đó.
+6. Ảnh được trả về từ cache nếu TTL vẫn chưa hết hạn.
+
+### Các vấn đề khi sử dụng CDN.
+
+• Chi phí: CDN được cung cấp bởi bên thứ ba, và bạn bị tính phí truyền dữ liệu ra vào CDN. Caching các nội dung không được sử dụng thường xuyên không mang lại lợi ích đáng kể, nên cần cân nhắc khi dùng CDN.
+• Đặt thời hạn bộ nhớ cache thích hợp: Đối với nội dung nhạy cảm về thời gian, đặt thời hạn cache là rất quan trọng. Thời hạn cache không nên quá ngắn hoặc quá dài.  Nếu quá dài, nội dung có thể không còn mới nữa. Nếu quá ngắn, nó có thể gây ra trùng lặp và tải lại nội dung từ server gốc vào CDN.
+• Dự phòng CDN: Bạn nên xem xét cách trang web/ứng dụng của mình đối phó với lỗi CDN. Nếu có sự cố ngắt CDN tạm thời, client sẽ có thể phát hiện ra sự cố và yêu cầu tài nguyên từ server gốc.
+• Tệp không hợp lệ: Bạn có thể xóa một tệp khỏi CDN trước khi nó hết hạn bằng cách thực hiện một trong các thao tác sau:
+    • Vô hiệu hóa đối tượng CDN bằng cách sử dụng các API do nhà cung cấp CDN cung cấp.
+    • Sử dụng phiên bản tạo đối tượng để cung cấp một phiên bản khác của đối tượng. Để phiên bản một đối tượng, bạn có thể thêm một tham số vào URL, chẳng hạn như số phiên bản. Ví dụ: phiên bản số 2 được thêm vào chuỗi truy vấn: image.png? V = 2.
+
+![cdn](./assets/cdn-3.png)
+
+1. Các tài nguyên tĩnh như (CSS, JS, ảnh,...) sẽ không được phục vụ trên web server. Chúng được nạp từ CDN để cải thiện hiệu suất.
+2. Cơ sở dữ liệu sẽ tải nhẹ nhàng hơn nhờ dữ liệu cache.
+
+## Stateless web tier
+
+Giờ là lúc để nói về mở rộng web tier theo chiều ngang. Để thực hiện, ta cần chuyển đổi trang jthais của web tier. Đâu là một thách thức cho lưu trữ dữ liệu phiên (seesion) trong bộ nhớ lâu dài như SQL hay NoSQL. Mỗi web server trong cụm có thể truy cập trạng thái dữ liệu từ cơ sở dữ liệu. Điều này gọi là stateless web tier
