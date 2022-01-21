@@ -169,4 +169,45 @@ Hình minh hoạ luồng làm việc của CDN
 
 ## Stateless web tier
 
-Giờ là lúc để nói về mở rộng web tier theo chiều ngang. Để thực hiện, ta cần chuyển đổi trang jthais của web tier. Đâu là một thách thức cho lưu trữ dữ liệu phiên (seesion) trong bộ nhớ lâu dài như SQL hay NoSQL. Mỗi web server trong cụm có thể truy cập trạng thái dữ liệu từ cơ sở dữ liệu. Điều này gọi là stateless web tier
+Giờ là lúc để nói về mở rộng web tier theo chiều ngang. Để thực hiện, ta cần chuyển đổi trạng thái của web tier. Đâu là một thách thức cho lưu trữ dữ liệu phiên (seesion) trong bộ nhớ lâu dài như SQL hay NoSQL. Mỗi web server trong cụm có thể truy cập trạng thái dữ liệu từ cơ sở dữ liệu. Điều này gọi là stateless web tier.
+
+### Stateful architecture
+
+Vài điểm khác nhau giữa server stateful và server stateless. Một server stateful nhớ dữ liệu (trạng thái) của client từ yêu cầu này sang yêu cầu kế tiếp. Mọt server stateless không cầ nhớ trạng thái đó.
+
+![stateful](./assets/stateful.png)
+
+Trong hình trên, dữ liệu phiên của người dùng A và cả ảnh người dùng được lưu ở server 1. Để xác nhận người dùng A, các yêu cầu HTTP phải đến server 1. Nếu một yêu cầu đến server khác như server 2, yêu cầu sẽ nhận lỗi vì phiên của A không có ở server 2. Tương tự yêu cầu HTTP xác thực người dùng B phải đến server 2 và người dùng C phải đến server 3.
+
+Vấn đề là các yêu cầu từ cùng một client phải đến cùng một server. Điều này với lượng phiên cố đinh, có thể thực hiện trong cân bằng tải, tuy nhiên nó làm tăng chi phí. Việc thêm hay bỏ server sẽ phức tạp hơn và xử lý lỗi ở server cũng là một thách thức không nhỏ.
+
+### Stateless architecture
+
+![stateless](./assets/stateless.png)
+
+Trong kiến trúc stateless, các yêu cầu HTTP từ người dùng có thể đến bất kỳ web server nào, nó nạp trạng thái dữ liệu từ bộ chia sẽ dữ liệu (shared storage). Trạng thái dữ liệu được lưu ở bộ chia sẻ dữ liệu nằm bên ngoài web server. Một hệ thống stateless đơn giản hơn, mạnh mẽ hơn và dễ mở rộng hơn.
+
+![stateless](./assets/stateless-tier.png)
+
+Trong hình trên ta chuyển phiên dữ liệu ra ngoài web tier và lưu nó ở bộ lưu trữ cố định. Bộ chia sẻ dữ liệu có thể là RDBMS, Redis hay NoSQL,... NoSQL là lựa chọn dễ dàng nhất cho mở rộng. Aato-scaling nghĩa là quá trình tự động thêm hay xoá web server dựa trên lưu lượng tải. Sau khi trạng thái dữ liệu bị xoá khỏi web server, auto-scaling sẽ làm việc.
+
+Website của bạn dần mở rộng và thu hút lượng lớn người dùng quốc tế. Để cải thiện tính khả dụng và cung cấp trải nghiệm tốt hơn trên mọi miền địa lý, việc hỗ trợ nhiều trung tâm dữ liệu là cấp thiết.
+
+## Data centers
+
+Trong hình bên dưới là ví dụ với hai data center. Trong các hoạt động thông thường, người dùng sẽ được định tuyến theo địa lý, tiếng anh là geoDNS-routed, còn gọi là geo-routed, đến trung tâm dữ liệu gần nhất với lưu lượng phân chia là:
+`x%` ở Đông Mỹ và `(100 – x)%` ở Tây Mỹ.
+
+geoDNS là một dịch vụ DNS cho phép tên miền phản giải thành địa chỉ IP dựa trên vị trí người dùng.
+
+![data-center](./assets/data-center-1.png)
+
+Trong trường hợp bất kỳ trung tâm dữ liệu nào ngừng hoạt động, ta sẽ hướng tất cả lưu lượng truy cập đến trung tâm dữ liệu hoạt động tốt. Trong hình trên, trung tâm dữ liệu 2 (US-West) đang ngoại tuyến và 100% lưu lượng được chuyển đến trung tâm dữ liệu 1 (US-East).
+
+![data-center](./assets/data-center-2.png)
+
+Các thách thức kỹ thuật cần giải quyết để thiết lập đa trung tập dữ liệu:
+- Điều hướng lưu lượng truy cập: Cần có các công cụ hiệu quả để hướng lưu lượng truy cập đến đúng trung tâm dữ liệu. GeoDNS có thể được dùng để điều hướng lưu lượng đếnn trung tâm dữ liệu gần nhất dựa trên vị trí người dùng.
+- Đồng bộ dữ liệu: Người dùng từ nhiều vùng miền khác nhau có thể sử dụng cơ sở dữ liệu hoặc bộ nhớ đệm cục bộ khác nhau. Trong trường hợp chuyển đổi dự phòng, lưu lượng truy cập có thể được chuyển đến trung tâm dữ liệu nơi dữ liệu không có sẵn.  Một chiến lược phổ biến là sao chép dữ liệu trên nhiều trung tâm dữ liệu. Một nghiên cứu trước đây
+cho thấy cách Netflix triển khai nhân rộng trung tâm đa dữ liệu không đồng bộ
+- Kiểm thử và triển khai: Với thiết lập đa trung tâm dữ liệu, điều quan trọng là phải kiểm tra trang web/ứng dụng của bạn tại các vị trí khác nhau. Các công cụ triển khai tự động rất quan trọng để giữ cho các dịch vụ nhất quán thông qua tất cả các trung tâm dữ liệu.
