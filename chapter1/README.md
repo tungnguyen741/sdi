@@ -274,3 +274,46 @@ Các bảng người dùng trong cơ sở dữ liệu
 ![shards](./assets/db-shards.png)
 
 Nhân tố quan trọng khi triển khai một sharding là lựa chọn sharding key. Sharding key còn gọi là partition key bao gồm một hoặc nhiều cột xác định dữ liệu được phân phối thế nào. Trong hình trên, "user_id" là sharding key. Một sharding key cho phép bạn truy vấn và chỉnh sửa dữ liệu hiệu quả bởi truy vấn rẽ nhánh đến cơ sở dữ liệu phù hợp. Khi chọn sharding key, một trong các tiêu chí quan trọng để chọn key cho là có thể phân bố dữ liệu đồng đều.
+
+Sharding là kỹ thuật tuyệt vời cho mở rộng cơ sở dữ liệu nhưng nó không phải là giải pháp hoàn hảo. Nó đưa ra những thách thức mới và phức tạp đối với hệ thống: 
+
+- **Resharding data**: khi
+    1. Một shard đơn không chứa dữ liệu được nữa vì sự gia tăng nhanh chóng.
+    2. Một số shard nhất định có thể bị cạn kiệt shard nhanh hơn các shard khác do phân phối dữ liệu không đồng điều. Khi cạn kiệt, nó yêu cầu cập nhật hàm sharding và chuyển dự liệu xung quanh. 
+- **Celebrity problem**: còn gọi là vấn đề hotspot key. Truy cập quá mức vào một shard cụ thể có thể gây quá tải server. Ví dụ như với ứng dụng mạng xã hội, Katy Perry, Justin Bieber và Lady Gaga đều trên cùng một shard, shard đó sẽ bị overwhelmed cho thao tác đọc. Để giải quyết vấn đề này ta cần phải phân bộ một shard cho từng người nổi tiếng. Mỗi shard thậm chí có thể yêu cầu phân vùng thêm.
+- **Join và de-normalization**: Một khi cơ sở dữ liệu đã được chia nhỏ trên nhiều server, rất khó để thực hiện các thao tác JOIN trên các shard. Một giải pháp phổ biến là chuẩn hóa cơ sở dữ liệu để các truy vấn có thể được thực hiện trong một bảng duy nhất.
+
+Trong hình bên dưới, cơ sở dữ liệu shard hỗ trợ lượng truy cập dữ liệu tăng nhanh. Cùng thời điểm, mọt số hàm phi quan hệ được chuyển vào bộ dữ liệu NoSQL để giảm tải cơ sở dữ liệu. 
+
+![complete](./assets/complete.png)
+
+## Hàng triệu người dùng và xa hơn thế nữa
+
+Mở rộng hệ thống là một vòng lặp vô tận. Mỗi lần lặp ta sẽ học được một điều gì đó mới. Cần điều chỉnh nhiều hơn với các chiến lược mới để mở rộng ra hàng triệu người dùng. Ví dụ: bạn có thể cần tối ưu hoá hệ thống của mình và tách hệ thống thành các dịch vụ nhỏ đồng đều hơn. Tất cả kỹ thuật đã học ở chương này cung cấp một nền tảng tốt để giải quyết các vấn đề mới. Ở cuối chương, ta có bản tốm tắt về những gì đã học:
+• Kiến trúc web stateless
+• Xây dựng bộ dự phòng ở mọi nơi
+• Bộ nhớ đệm càng nhiều càng tốt
+• Hỗ trợ đa trung tâm dữ liệu
+• Lưu tài nguyên tĩnh trên CDN
+• Mở rộng dữ liệu bằng sharding
+• Tách các tier trên nhiều thiết bị
+• Giám sát hệ thống và sử dụng các công cụ tự động hóa
+
+# Tham khảo
+
+[1] [Hypertext Transfer Protocol](https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol)
+[2] [Should you go Beyond Relational Databases?](https://blog.teamtreehouse.com/should-you-go-beyond-relational-databases)
+[3] [Replication](https://en.wikipedia.org/wiki/Replication_(computing))
+[4] [Multi-master replication](https://en.wikipedia.org/wiki/Multi-master_replication)
+[5] [NDB Cluster Replication: Multi-Master and Circular Replication]
+https://dev.mysql.com/doc/refman/5.7/en/mysql-cluster-replication-multi-master.html
+[6] [Caching Strategies and How to Choose the Right One](https://codeahoy.com/2017/08/11/caching-strategies-and-how-to-choose-the-right-one/)
+[7] R. Nishtala, "Facebook, Scaling Memcache at," 10th USENIX Symposium on Networked
+Systems Design and Implementation (NSDI ’13).
+[8] [Single point of failure](https://en.wikipedia.org/wiki/Single_point_of_failure)
+[9] [Amazon CloudFront Dynamic Content Delivery](https://aws.amazon.com/cloudfront/dynamic-content/)
+[10] [Configure Sticky Sessions for Your Classic Load Balancer](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-sticky-sessions.html)
+[11] [Active-Active for Multi-Regional Resiliency](https://netflixtechblog.com/active-active-for-multi-regional-resiliency-c47719f6685b)
+[12] [Amazon EC2 High Memory Instances](https://aws.amazon.com/ec2/instance-types/high-memory/)
+[13] [What it takes to run Stack Overflow](http://nickcraver.com/blog/2013/11/22/what-it-takes-to-run-stack-overflow)
+[14] [What The Heck Are You Actually Using NoSQL For](http://highscalability.com/blog/2010/12/6/what-the-heck-are-you-actually-using-nosqlfor.htm)
