@@ -211,3 +211,66 @@ Các thách thức kỹ thuật cần giải quyết để thiết lập đa tru
 - Đồng bộ dữ liệu: Người dùng từ nhiều vùng miền khác nhau có thể sử dụng cơ sở dữ liệu hoặc bộ nhớ đệm cục bộ khác nhau. Trong trường hợp chuyển đổi dự phòng, lưu lượng truy cập có thể được chuyển đến trung tâm dữ liệu nơi dữ liệu không có sẵn.  Một chiến lược phổ biến là sao chép dữ liệu trên nhiều trung tâm dữ liệu. Một nghiên cứu trước đây
 cho thấy cách Netflix triển khai nhân rộng trung tâm đa dữ liệu không đồng bộ
 - Kiểm thử và triển khai: Với thiết lập đa trung tâm dữ liệu, điều quan trọng là phải kiểm tra trang web/ứng dụng của bạn tại các vị trí khác nhau. Các công cụ triển khai tự động rất quan trọng để giữ cho các dịch vụ nhất quán thông qua tất cả các trung tâm dữ liệu.
+
+Để có thể mở rộng hệ thống được xa hơn, ta cần tách rời các thành phần của hệ thống để nó có thể mở rộng độc lập. Message queue là một kỹ thuật được sử dụng trong thế giới thực để giải quyết vấn đề này.
+
+## Message Queue
+
+Message queue là một thành phần bền vững, được lưu trữ trong bộ nhớ, hỗ trợ giao tiếp bất đồng bộ. Nó phục vụ như một bộ đệm và phân phối các yêu cầu bất đồng bộ. Kiến trúc cơ bản của message queue rất đơn giản. Dịch vụ input gọi là **publishers** hoặc producers tạo thông điệp và công khai nó lên message queue. Các dịch vụ hoặc server khác được gọi là **subscribers** hoặc consumers kết nối đến queue và thực hiện các hành động được xác định bởi thông điệp.
+
+![message-queue](./assets/message-queue-1.png)
+
+Việc tách rời làm message queue trở thành một kiến trúc tuyệt vời để xây dựng các ứng dụng có độ tin cây và mở rộng cao. Với message queue, publisher có thể tạo thông điệp trên queue để subscriber hiện tại chưa có mặt có thể xử lý nó sau đó. Subscriber cũng có thể đọc thông điệp ngay cả khi publisher không có mặt.
+
+Theo dõi các trường hợp sau: ứng dụng của bạn hỗ trợ chỉnh sửa ảnh, bao gồm cắt, dán, đổi hình dạng, làm mờ,... Các tác vụ chỉnh sửa cần tốn thời gian để hoàn thành. Trong hình bên dưới, web server tải quá trình xử lý ảnh lên message queue. Worker xử lý ảnh nhận công việc từ message queue và thực hiện các tác vụ tuỳ chỉnh ảnh bất đồng bộ. Publisher và subscriber có thể được mở rộng quy mô một cách độc lập. Khi kích thước của queue trở nên lớn hơn, nhiều worker được thêm vào để giảm thời gian xử lý. Tuy nhiên, nếu queue trống trong hầu hết thời gian, số lượNg worker có thể giảm.
+
+![message-queue](./assets/message-queue-2.png)
+
+### Logging, metric, automation
+
+Khi làm việc với website việc chạy vài server, logging, metric và automation là không cần thiết. Tuy nhiên khi website dần lớn hơn, thì các công cụ trên là cần thiết.
+
+- **Logging**: Nhật ký theo dõi lỗi (monitor error log) là rất quan trọng vì nó giúp xác định các lỗi và sự cố hệ thống. Bạn có thể theo dõi lỗi ở mỗi cấp server hoặc sử dụng các công cụ để tổng hợp chúng thành một dịch vụ trung tâm dễ dàng tìm kiếm và xem.
+- **Metrics**: Việc thu thập các kiểu chỉ số khác nhau giúp chúng ta có được thông tin chi tiết về doanh nghiệp và hiểu được tình trạng hoạt động của hệ thống.
+- Chỉ số level host: CPU, bộ nhớ, ổ đĩa,...
+- Chỉ số level tổng hợp: hiệu suất cơ sở dữ liệu, bộ đệm,...
+- Chỉ số level doanh nghiệp: doanh thu, mức độ hoạt động hằng ngày,...
+
+- **Automation**: Khi hệ thóng trở nên lớn và phức tạp, ta cần xây các công cụ tự động xây dựng để cải thiện hiệu suất sản xuất. Tích hợp liên tục là một bài toán hay, trong đó mỗi lần check-in code đều được xác minh thông qua tự động hóa, cho phép các nhóm phát hiện sớm các vấn đề. Bên cạnh đó, việc tự động hóa quy trình xây dựng, kiểm tra, triển khai, v.v. có thể cải thiện đáng kể năng suất của nhà phát triển.
+
+### Thêm message queue và các tool khác.
+
+Cập nhật thiết kế như bên dưới, với giới hạn không gian, chỉ có một trung tâm dữ liệu được hiển thị trong hình.
+1. Thiết kế bao gồm một message queue giúp hệ thống mềm mại hơn.
+2. Các công cụ logging, monitoring m metrics và automation được thêm vào.
+
+![tools](./assets/tools.png)
+
+## Mở rộng cơ sở dữ liệu
+
+Có hai cách tiếp cận: mở rộng theo chiều dọc và chiều ngang.
+
+### Mở rộng theo chiều dọc.
+
+Mở rộng theo chiều dọc (scale up) là mở rộng bằng cách thêm CPU, RAM, DISK vào máy đang hoạt động. Có một số máy chủ cơ sở dữ liệu mạnh mẽ như Amazon RDS (Relational Database Service), bạn có thể nhận được một máy chủ cơ sở dữ liệu với 24TB RAM. Loại máy chủ cơ sở dữ liệu mạnh mẽ này có thể lưu trữ và xử lý rất nhiều dữ liệu. Ví dụ: stackoverflow.com vào năm 2013 có hơn 10 triệu người truy cập hàng tháng, nhưng nó chỉ có 1 cơ sở dữ liệu chính. Tuy nhiên, mở rộng tỉ lệ theo chiều dọc có các nhược điểm:
+- Việc thêm phần cứng có giới hạn. Nếu lượng người dùng quá lớn, một server là không đủ.
+- Tăng nguy cơ SPOF.
+- Chỉ phí tổng thể sẽ tăng. Các server mạnh mẽ là rất đắt.
+
+### Mở rộng theo chiều ngang
+
+Còn gọi là sharding, là việc thêm nhiều server hơn. Ảnh so sánh mở rộng theo chiều dọc và chiều ngang.
+
+![scaling](./assets/scaling.png)
+
+Sharding phân tách cơ sở dữ liệu lớn thành các phần nhỏ hơn, giúp dễ quản lý các phần này gọi là shards. Mỗi shard chia sẽ cùng lược đồ dữ liệu, mặc dù dữ liệu thực tế trên mỗi shard là duy nhất đối với shard đó.
+
+Ảnh dưới là ví dụ của cơ sở dữ liệu được sharded. Dữ liệu người dùng được cấp phát từ server cơ sở dữ liệu dựa trên user ID. Bất cứ khi nào truy cập dữ liệu, hàm băm sẽ được dùng để tìm shard tương ứng. Trong ví dụ =này, `user_id%4` được dùng cho hàm băm. Nếu kết quả là 0, shard 0 được dùng để lưu và nạp dữ liệu. Nếu là 1, shard 1 được dùng. Tương tự với các shard khác.
+
+![shards](./assets/shards.png)
+
+Các bảng người dùng trong cơ sở dữ liệu
+
+![shards](./assets/db-shards.png)
+
+Nhân tố quan trọng khi triển khai một sharding là lựa chọn sharding key. Sharding key còn gọi là partition key bao gồm một hoặc nhiều cột xác định dữ liệu được phân phối thế nào. Trong hình trên, "user_id" là sharding key. Một sharding key cho phép bạn truy vấn và chỉnh sửa dữ liệu hiệu quả bởi truy vấn rẽ nhánh đến cơ sở dữ liệu phù hợp. Khi chọn sharding key, một trong các tiêu chí quan trọng để chọn key cho là có thể phân bố dữ liệu đồng đều.
