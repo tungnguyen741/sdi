@@ -54,7 +54,7 @@ Khi lưu lượng truy cập thấp, mở rộng theo chiều dọc là giải p
 
 Mở rộng theo chiều ngang phù hợp hơn với mở rộng ứng dụng quy mô lớn so với mở rộng theo chiều dọc.
 
-Trong thiết kế trước, người dùng được kết nối trực tiếp với web server. Người dùng sẽ không thể truy cập trang web nếu server ngoại tuyến. Trong trường hợp khác, nếu nhiều người dùng truy cập web server đồng thời khiến server trở nên quá tải, dẫn đến phản hồi người dùng chập hoặc không thể kết nối được server. Lúc này, cân bằng tải là một kỹ thuật tốt nhất để giải quyết vấn đề này.
+Trong thiết kế trước, người dùng được kết nối trực tiếp với web server. Người dùng sẽ không thể truy cập trang web nếu server ngoại tuyến. Trong trường hợp khác, nếu nhiều người dùng truy cập web server đồng thời khiến server trở nên quá tải, dẫn đến phản hồi người dùng chậm hoặc không thể kết nối được server. Lúc này, cân bằng tải là một kỹ thuật tốt nhất để giải quyết vấn đề này.
 
 ## Bộ cân bằng tải
 
@@ -72,7 +72,7 @@ Bây giờ ở web tier đã ổn vậy còn data tier. Thiết kế hiện tạ
 
 ## Bản sao cơ sở dữ liệu
 
-Từ Wikipedia: "Bản sao cơ sở dữ liệu có thể được dụng trong hệ thống quản lý nhiều cơ sở dữ liệu, thông thường mối quan hệ master/slave giữa bản gốc (master) và bản copy (slave)*
+Từ Wikipedia: "Bản sao cơ sở dữ liệu có thể được sử dụng trong hệ thống quản lý nhiều cơ sở dữ liệu, thông thường nó sẽ là mối quan hệ master/slave giữa bản gốc (master) và bản copy (slave)*
 
 Cơ sở dữ liệu master chỉ hỗ trợ thao tác ghi. Còn các cơ sở dữ liệu slave lấy dữ liệu sao chép từ cơ sở dữ liệu master và chỉ cung cấp thao tác đọc. Tất cả lệnh chỉnh sửa dữ liệu như INSERT, DELETE và UPDATE sẽ được gửi vào cơ sở dữ liệu master. Phần lớn ứng dụng đều yêu cầu truy cập đọc nhiều hơn ghi, do đó số lượng cơ sở dữ liệu slave trong hệ thống nhiều hơn cơ sở dữ liệu master. 
 
@@ -122,9 +122,9 @@ cache.get('myKey)
 
 Các vấn đề khi sử dụng cache:
 - Quyết định khi nào sử dụng cache. Cân nhắc sử dụng cache khi thường xuyên đọc dữ liệu và ít chỉnh sửa. Vì dữ liệu cache được lưu trữ ở bộ nhớ không ổn định, server cache không phải ý tưởng tốt cho dữ liệu lâu dài. Ví dụ, nếu một server cache khởi động lại, tất cả dữ liệu sẽ bị mất, do đó dữ liệu quan trọng nên được lưu trữ ở bộ nhớ dài lâu.
-- Chính sách hết hạn. Mỗi làn dữ liệu cache hết hạn, nó sẽ bị xoá khỏi cache. Khi không có chính sách hết hạn, dữ liệu được lưu trong cache sẽ được lưu vĩnh viễn. Lời khuyên là đừng để ngày hết hạn quá ngắn vì hệ thống phải tải dữ liệu từ cơ sở dữ liệu nhiều lần. Bên cạnh đó cũng không nên đặt ngày hết hạn quá lâu vì dữ liệu có thể cũ.
+- Chính sách hết hạn. Mỗi lần dữ liệu cache hết hạn, nó sẽ bị xoá khỏi cache. Khi không có chính sách hết hạn, dữ liệu được lưu trong cache sẽ được lưu vĩnh viễn. Lời khuyên là đừng để ngày hết hạn quá ngắn vì hệ thống phải tải dữ liệu từ cơ sở dữ liệu nhiều lần. Bên cạnh đó cũng không nên đặt ngày hết hạn quá lâu vì dữ liệu có thể cũ.
 - Tính nhất quán: liên quan đến việc giữ dữ liệu lưu trữ và cache đồng bộ. Không nhất quán có thể xảy ra khi thao tác chỉnh sửa dữ liệu trong cơ sở dữ liệu và cache không nằm trong một giao dịch đơn nhất. Khi mở rộng trên nhiều khu vực địa lý, duy trì tính nhất quán giữa cơ sở dữ liệu và cache là một thử thách.  Chỉ tiến hơn đọc bài "Scaling Memcache ở Facebook"
-- Giảm thiểu thất bại: Một server cache duy nhất có thể là một SPOF (single point of failure), điểm lỗi tiềm ẩn. Theo định nghĩa từ Wikipedia: "Một điểm lỗi duy nhất (SPOF) là một phần của hệ thống, nếu nó bị lỗi, toàn bộ hệ thống sẽ ngừng hoạt động". Như vậy, nhiều server cache trên các data center khác nhau sẽ tránh được SPOF. Một cách tiếp cận khác là cung cấp quá mức bộ nhớ cần thiết theo tỷ lệ phần trăm nhất định, điều này cung cấp một bộ đệm khi mức sử dụng bộ nhớ tăng lên.
+- Giảm thiểu thất bại: Một server cache duy nhất có thể là một SPOF (single point of failure). Theo định nghĩa từ Wikipedia: "Một điểm lỗi duy nhất (SPOF) là một phần của hệ thống, nếu nó bị lỗi, toàn bộ hệ thống sẽ ngừng hoạt động". Như vậy, nhiều server cache trên các data center khác nhau sẽ tránh được SPOF. Một cách tiếp cận khác là cung cấp quá mức bộ nhớ cần thiết theo tỷ lệ phần trăm nhất định, điều này cung cấp một bộ đệm khi mức sử dụng bộ nhớ tăng lên.
 
 ![failure](./assets/failure.png)
 
@@ -132,11 +132,11 @@ Các vấn đề khi sử dụng cache:
 
 ## CDN
 
-Một CDN là một mạng lưới máy chỉ phân tán theo khu vực địa lý được dùng để phân phối nội dung tĩnh. Nội dung tĩnh có thể là hình ảnh, video, file CSS, file JS,...
+Một CDN là một mạng lưới máy chủ phân tán theo khu vực địa lý được dùng để phân phối nội dung tĩnh. Nội dung tĩnh có thể là hình ảnh, video, file CSS, file JS,...
 
 Caching nội dụng động là một khái niệm mới và nằm ngoài phạm vi bài viết này. Nó cho phép lưu vào cache của trang HTML dựa trên đường dẫn yêu cầu, chuỗi truy vấn, cookie và header của yêu cầu. Muốn biết thêm hãy tham khảo tài liệu ở cuối bài viết. Bây giờ ta quay lại caching nội dụng tĩnh với CDN.
 
-Làm thế nào CDN làm việc ở high-level: khi một người dùng vào website, server CDN gân với người dùng nhất sẽ phân phối nội dung tĩnh. Tức, người dùng càng ở xa server CDN, thì tải web càng chậm. Ví dụ, các server CDN ở San Francisco, còn người dùng ở Los Angeles sẽ nhận nội dung nhanh hơn người dùng ở châu Âu. Hình bên dưới mô tả cách CDN cải thiện tốc độ tải.
+Làm thế nào CDN làm việc ở high-level: khi một người dùng vào website, server CDN gần với người dùng nhất sẽ phân phối nội dung tĩnh. Tức, người dùng càng ở xa server CDN, thì tải web càng chậm. Ví dụ, các server CDN ở San Francisco, còn người dùng ở Los Angeles sẽ nhận nội dung nhanh hơn người dùng ở châu Âu. Hình bên dưới mô tả cách CDN cải thiện tốc độ tải.
 
 ![cdn](./assets/cdn-1.png)
 
@@ -148,19 +148,19 @@ Hình minh hoạ luồng làm việc của CDN
 - https://mysite.cloudfront.net/logo.jpg
 - https://mysite.akamai.com/image-manager/img/logo.jpg
 2. Nếu server CDN không có image.png trong cache, nó sẽ yêu cầu file từ một web server gốc hoặc bộ lưu trữ trực tuyến như Amazon S3.
-3. Bên gốc trả về `image.png` cho server CDN, bao gồm cả header HTTP là Time-to-Live để mô tả thời gian sống của ảnh trong cache.
+3. Bên gốc trả về `image.png` cho server CDN, bao gồm cả header HTTP là Time-to-Live để mô tả thời hạn sử dụng của ảnh trong cache.
 4. CDN lưu ảnh vào cache và trả về cho người dùng A. Ảnh sẽ ở trong cache cho đến khi TTL hết hạn.
 5. Người dùng B gửi yêu cầu đến cùng ảnh đó.
 6. Ảnh được trả về từ cache nếu TTL vẫn chưa hết hạn.
 
 ### Các vấn đề khi sử dụng CDN.
 
-• Chi phí: CDN được cung cấp bởi bên thứ ba, và bạn bị tính phí truyền dữ liệu ra vào CDN. Caching các nội dung không được sử dụng thường xuyên không mang lại lợi ích đáng kể, nên cần cân nhắc khi dùng CDN.
-• Đặt thời hạn bộ nhớ cache thích hợp: Đối với nội dung nhạy cảm về thời gian, đặt thời hạn cache là rất quan trọng. Thời hạn cache không nên quá ngắn hoặc quá dài.  Nếu quá dài, nội dung có thể không còn mới nữa. Nếu quá ngắn, nó có thể gây ra trùng lặp và tải lại nội dung từ server gốc vào CDN.
-• Dự phòng CDN: Bạn nên xem xét cách trang web/ứng dụng của mình đối phó với lỗi CDN. Nếu có sự cố ngắt CDN tạm thời, client sẽ có thể phát hiện ra sự cố và yêu cầu tài nguyên từ server gốc.
-• Tệp không hợp lệ: Bạn có thể xóa một tệp khỏi CDN trước khi nó hết hạn bằng cách thực hiện một trong các thao tác sau:
+- Chi phí: CDN được cung cấp bởi bên thứ ba, và bạn bị tính phí truyền dữ liệu ra vào CDN. Caching các nội dung không được sử dụng thường xuyên không mang lại lợi ích đáng kể, nên cần cân nhắc khi dùng CDN.
+- Đặt thời hạn bộ nhớ cache thích hợp: Đối với nội dung nhạy cảm về thời gian, đặt thời hạn cache là rất quan trọng. Thời hạn cache không nên quá ngắn hoặc quá dài. Nếu quá dài, nội dung có thể không còn mới nữa. Nếu quá ngắn, nó có thể gây ra trùng lặp và tải lại nội dung từ server gốc vào CDN.
+- Dự phòng CDN: Bạn nên xem xét cách trang web/ứng dụng của mình đối phó với lỗi CDN. Nếu có sự cố ngắt CDN tạm thời, client sẽ có thể phát hiện ra sự cố và yêu cầu tài nguyên từ server gốc.
+- Tệp không hợp lệ: Bạn có thể xóa một tệp khỏi CDN trước khi nó hết hạn bằng cách thực hiện một trong các thao tác sau:
     • Vô hiệu hóa đối tượng CDN bằng cách sử dụng các API do nhà cung cấp CDN cung cấp.
-    • Sử dụng phiên bản tạo đối tượng để cung cấp một phiên bản khác của đối tượng. Để phiên bản một đối tượng, bạn có thể thêm một tham số vào URL, chẳng hạn như số phiên bản. Ví dụ: phiên bản số 2 được thêm vào chuỗi truy vấn: image.png? V = 2.
+    • Sử dụng phiên bản tạo đối tượng để cung cấp một phiên bản khác của đối tượng. Để tạo một phiên bản đối tượng, bạn có thể thêm một tham số vào URL, chẳng hạn như số phiên bản. Ví dụ: phiên bản số 2 được thêm vào chuỗi truy vấn: `image.png?v=2`.
 
 ![cdn](./assets/cdn-3.png)
 
@@ -169,11 +169,11 @@ Hình minh hoạ luồng làm việc của CDN
 
 ## Stateless web tier
 
-Giờ là lúc để nói về mở rộng web tier theo chiều ngang. Để thực hiện, ta cần chuyển đổi trạng thái của web tier. Đâu là một thách thức cho lưu trữ dữ liệu phiên (seesion) trong bộ nhớ lâu dài như SQL hay NoSQL. Mỗi web server trong cụm có thể truy cập trạng thái dữ liệu từ cơ sở dữ liệu. Điều này gọi là stateless web tier.
+Giờ là lúc để nói về mở rộng web tier theo chiều ngang. Để thực hiện, ta cần chuyển đổi trạng thái của web tier. Đâu là một thách thức cho lưu trữ dữ liệu phiên (session) trong bộ nhớ lâu dài như SQL hay NoSQL. Mỗi web server trong cụm có thể truy cập trạng thái dữ liệu từ cơ sở dữ liệu. Điều này gọi là stateless web tier.
 
 ### Stateful architecture
 
-Vài điểm khác nhau giữa server stateful và server stateless. Một server stateful nhớ dữ liệu (trạng thái) của client từ yêu cầu này sang yêu cầu kế tiếp. Mọt server stateless không cầ nhớ trạng thái đó.
+Vài điểm khác nhau giữa server stateful và server stateless. Một server stateful nhớ dữ liệu (trạng thái) của client từ yêu cầu này sang yêu cầu kế tiếp. Mọt server stateless không cần nhớ trạng thái đó.
 
 ![stateful](./assets/stateful.png)
 
@@ -198,17 +198,17 @@ Website của bạn dần mở rộng và thu hút lượng lớn người dùng
 Trong hình bên dưới là ví dụ với hai data center. Trong các hoạt động thông thường, người dùng sẽ được định tuyến theo địa lý, tiếng anh là geoDNS-routed, còn gọi là geo-routed, đến trung tâm dữ liệu gần nhất với lưu lượng phân chia là:
 `x%` ở Đông Mỹ và `(100 – x)%` ở Tây Mỹ.
 
-geoDNS là một dịch vụ DNS cho phép tên miền phản giải thành địa chỉ IP dựa trên vị trí người dùng.
+geoDNS là một dịch vụ DNS cho phép phân giải tên miền thành địa chỉ IP dựa trên vị trí người dùng.
 
 ![data-center](./assets/data-center-1.png)
 
-Trong trường hợp bất kỳ trung tâm dữ liệu nào ngừng hoạt động, ta sẽ hướng tất cả lưu lượng truy cập đến trung tâm dữ liệu hoạt động tốt. Trong hình trên, trung tâm dữ liệu 2 (US-West) đang ngoại tuyến và 100% lưu lượng được chuyển đến trung tâm dữ liệu 1 (US-East).
+Trong trường hợp bất kỳ trung tâm dữ liệu nào ngừng hoạt động, ta sẽ hướng tất cả lưu lượng truy cập đến trung tâm dữ liệu còn hoạt động tốt. Trong hình trên, trung tâm dữ liệu 2 (US-West) đang ngoại tuyến và 100% lưu lượng được chuyển đến trung tâm dữ liệu 1 (US-East).
 
 ![data-center](./assets/data-center-2.png)
 
-Các thách thức kỹ thuật cần giải quyết để thiết lập đa trung tập dữ liệu:
-- Điều hướng lưu lượng truy cập: Cần có các công cụ hiệu quả để hướng lưu lượng truy cập đến đúng trung tâm dữ liệu. GeoDNS có thể được dùng để điều hướng lưu lượng đếnn trung tâm dữ liệu gần nhất dựa trên vị trí người dùng.
-- Đồng bộ dữ liệu: Người dùng từ nhiều vùng miền khác nhau có thể sử dụng cơ sở dữ liệu hoặc bộ nhớ đệm cục bộ khác nhau. Trong trường hợp chuyển đổi dự phòng, lưu lượng truy cập có thể được chuyển đến trung tâm dữ liệu nơi dữ liệu không có sẵn.  Một chiến lược phổ biến là sao chép dữ liệu trên nhiều trung tâm dữ liệu. Một nghiên cứu trước đây
+Các thách thức kỹ thuật cần giải quyết để thiết lập đa trung tâm dữ liệu:
+- Điều hướng lưu lượng truy cập: Cần có các công cụ hiệu quả để hướng lưu lượng truy cập đến đúng trung tâm dữ liệu. GeoDNS có thể được dùng để điều hướng lưu lượng đến trung tâm dữ liệu gần nhất dựa trên vị trí người dùng.
+- Đồng bộ dữ liệu: Người dùng từ nhiều vùng miền khác nhau có thể sử dụng cơ sở dữ liệu hoặc bộ nhớ đệm cục bộ khác nhau. Trong trường hợp chuyển đổi dự phòng, lưu lượng truy cập có thể bị chuyển đến trung tâm dữ liệu nơi dữ liệu không có sẵn. Một chiến lược phổ biến là sao chép dữ liệu trên nhiều trung tâm dữ liệu. Một nghiên cứu trước đây
 cho thấy cách Netflix triển khai nhân rộng trung tâm đa dữ liệu không đồng bộ
 - Kiểm thử và triển khai: Với thiết lập đa trung tâm dữ liệu, điều quan trọng là phải kiểm tra trang web/ứng dụng của bạn tại các vị trí khác nhau. Các công cụ triển khai tự động rất quan trọng để giữ cho các dịch vụ nhất quán thông qua tất cả các trung tâm dữ liệu.
 
@@ -220,9 +220,9 @@ Message queue là một thành phần bền vững, được lưu trữ trong b�
 
 ![message-queue](./assets/message-queue-1.png)
 
-Việc tách rời làm message queue trở thành một kiến trúc tuyệt vời để xây dựng các ứng dụng có độ tin cây và mở rộng cao. Với message queue, publisher có thể tạo thông điệp trên queue để subscriber hiện tại chưa có mặt có thể xử lý nó sau đó. Subscriber cũng có thể đọc thông điệp ngay cả khi publisher không có mặt.
+Việc tách rời làm message queue trở thành một kiến trúc tuyệt vời để xây dựng các ứng dụng có độ tin cậy và khả năng mở rộng cao. Với message queue, publisher có thể tạo thông điệp trên queue để subscriber hiện tại chưa có mặt có thể xử lý nó sau đó. Subscriber cũng có thể đọc thông điệp ngay cả khi publisher không có mặt.
 
-Theo dõi các trường hợp sau: ứng dụng của bạn hỗ trợ chỉnh sửa ảnh, bao gồm cắt, dán, đổi hình dạng, làm mờ,... Các tác vụ chỉnh sửa cần tốn thời gian để hoàn thành. Trong hình bên dưới, web server tải quá trình xử lý ảnh lên message queue. Worker xử lý ảnh nhận công việc từ message queue và thực hiện các tác vụ tuỳ chỉnh ảnh bất đồng bộ. Publisher và subscriber có thể được mở rộng quy mô một cách độc lập. Khi kích thước của queue trở nên lớn hơn, nhiều worker được thêm vào để giảm thời gian xử lý. Tuy nhiên, nếu queue trống trong hầu hết thời gian, số lượNg worker có thể giảm.
+Theo dõi các trường hợp sau: ứng dụng của bạn hỗ trợ chỉnh sửa ảnh, bao gồm cắt, dán, đổi hình dạng, làm mờ,... Các tác vụ chỉnh sửa cần tốn thời gian để hoàn thành. Trong hình bên dưới, web server tải quá trình xử lý ảnh lên message queue. Worker xử lý ảnh nhận công việc từ message queue và thực hiện các tác vụ tuỳ chỉnh ảnh bất đồng bộ. Publisher và subscriber có thể được mở rộng quy mô một cách độc lập. Khi kích thước của queue trở nên lớn hơn, nhiều worker được thêm vào để giảm thời gian xử lý. Tuy nhiên, nếu queue trống trong hầu hết thời gian, số lượng worker có thể giảm.
 
 ![message-queue](./assets/message-queue-2.png)
 
@@ -235,14 +235,13 @@ Khi làm việc với website việc chạy vài server, logging, metric và aut
 - Chỉ số level host: CPU, bộ nhớ, ổ đĩa,...
 - Chỉ số level tổng hợp: hiệu suất cơ sở dữ liệu, bộ đệm,...
 - Chỉ số level doanh nghiệp: doanh thu, mức độ hoạt động hằng ngày,...
-
-- **Automation**: Khi hệ thóng trở nên lớn và phức tạp, ta cần xây các công cụ tự động xây dựng để cải thiện hiệu suất sản xuất. Tích hợp liên tục là một bài toán hay, trong đó mỗi lần check-in code đều được xác minh thông qua tự động hóa, cho phép các nhóm phát hiện sớm các vấn đề. Bên cạnh đó, việc tự động hóa quy trình xây dựng, kiểm tra, triển khai, v.v. có thể cải thiện đáng kể năng suất của nhà phát triển.
+- **Automation**: Khi hệ thống trở nên lớn và phức tạp, ta cần tạo các công cụ tự động xây dựng để cải thiện hiệu suất sản xuất. Tích hợp liên tục là một bài toán hay, trong đó mỗi lần check-in code đều được xác minh thông qua tự động hóa, cho phép các nhóm phát hiện sớm các vấn đề. Bên cạnh đó, việc tự động hóa quy trình xây dựng, kiểm tra, triển khai, v.v. có thể cải thiện đáng kể năng suất của nhà phát triển.
 
 ### Thêm message queue và các tool khác.
 
 Cập nhật thiết kế như bên dưới, với giới hạn không gian, chỉ có một trung tâm dữ liệu được hiển thị trong hình.
 1. Thiết kế bao gồm một message queue giúp hệ thống mềm mại hơn.
-2. Các công cụ logging, monitoring m metrics và automation được thêm vào.
+2. Các công cụ logging, monitoring, metrics và automation được thêm vào.
 
 ![tools](./assets/tools.png)
 
@@ -263,9 +262,9 @@ Còn gọi là sharding, là việc thêm nhiều server hơn. Ảnh so sánh m�
 
 ![scaling](./assets/scaling.png)
 
-Sharding phân tách cơ sở dữ liệu lớn thành các phần nhỏ hơn, giúp dễ quản lý các phần này gọi là shards. Mỗi shard chia sẽ cùng lược đồ dữ liệu, mặc dù dữ liệu thực tế trên mỗi shard là duy nhất đối với shard đó.
+Sharding phân tách cơ sở dữ liệu lớn thành các phần nhỏ giúp dễ quản lý hơn, các phần này gọi là shards. Mỗi shard chia sẽ cùng lược đồ dữ liệu, mặc dù dữ liệu thực tế trên mỗi shard là duy nhất đối với shard đó.
 
-Ảnh dưới là ví dụ của cơ sở dữ liệu được sharded. Dữ liệu người dùng được cấp phát từ server cơ sở dữ liệu dựa trên user ID. Bất cứ khi nào truy cập dữ liệu, hàm băm sẽ được dùng để tìm shard tương ứng. Trong ví dụ =này, `user_id%4` được dùng cho hàm băm. Nếu kết quả là 0, shard 0 được dùng để lưu và nạp dữ liệu. Nếu là 1, shard 1 được dùng. Tương tự với các shard khác.
+Ảnh dưới là ví dụ của cơ sở dữ liệu được shard. Dữ liệu người dùng được cấp phát từ server cơ sở dữ liệu dựa trên user ID. Bất cứ khi nào truy cập dữ liệu, hàm băm sẽ được dùng để tìm shard tương ứng. Trong ví dụ này, `user_id%4` được dùng cho hàm băm. Nếu kết quả là 0, shard 0 được dùng để lưu và nạp dữ liệu. Nếu là 1, shard 1 được dùng. Tương tự với các shard khác.
 
 ![shards](./assets/shards.png)
 
@@ -273,14 +272,14 @@ Các bảng người dùng trong cơ sở dữ liệu
 
 ![shards](./assets/db-shards.png)
 
-Nhân tố quan trọng khi triển khai một sharding là lựa chọn sharding key. Sharding key còn gọi là partition key bao gồm một hoặc nhiều cột xác định dữ liệu được phân phối thế nào. Trong hình trên, "user_id" là sharding key. Một sharding key cho phép bạn truy vấn và chỉnh sửa dữ liệu hiệu quả bởi truy vấn rẽ nhánh đến cơ sở dữ liệu phù hợp. Khi chọn sharding key, một trong các tiêu chí quan trọng để chọn key cho là có thể phân bố dữ liệu đồng đều.
+Nhân tố quan trọng khi triển khai sharding là lựa chọn sharding key. Sharding key còn gọi là partition key bao gồm một hoặc nhiều cột xác định dữ liệu được phân phối thế nào. Trong hình trên, "user_id" là sharding key. Một sharding key cho phép bạn truy vấn và chỉnh sửa dữ liệu hiệu quả bởi truy vấn rẽ nhánh đến cơ sở dữ liệu phù hợp. Khi chọn sharding key, một trong các tiêu chí quan trọng để chọn key cho là có thể phân bố dữ liệu đồng đều.
 
 Sharding là kỹ thuật tuyệt vời cho mở rộng cơ sở dữ liệu nhưng nó không phải là giải pháp hoàn hảo. Nó đưa ra những thách thức mới và phức tạp đối với hệ thống: 
 
 - **Resharding data**: khi
     1. Một shard đơn không chứa dữ liệu được nữa vì sự gia tăng nhanh chóng.
-    2. Một số shard nhất định có thể bị cạn kiệt shard nhanh hơn các shard khác do phân phối dữ liệu không đồng điều. Khi cạn kiệt, nó yêu cầu cập nhật hàm sharding và chuyển dự liệu xung quanh. 
-- **Celebrity problem**: còn gọi là vấn đề hotspot key. Truy cập quá mức vào một shard cụ thể có thể gây quá tải server. Ví dụ như với ứng dụng mạng xã hội, Katy Perry, Justin Bieber và Lady Gaga đều trên cùng một shard, shard đó sẽ bị overwhelmed cho thao tác đọc. Để giải quyết vấn đề này ta cần phải phân bộ một shard cho từng người nổi tiếng. Mỗi shard thậm chí có thể yêu cầu phân vùng thêm.
+    2. Một số shard nhất định có thể bị cạn kiệt shard nhanh hơn các shard khác do phân phối dữ liệu không đồng điều. Khi cạn kiệt, nó yêu cầu cập nhật hàm sharding và chuyển dữ liệu xung quanh. 
+- **Celebrity problem**: còn gọi là vấn đề hotspot key. Truy cập quá mức vào một shard cụ thể có thể gây quá tải server. Ví dụ như với ứng dụng mạng xã hội, Katy Perry, Justin Bieber và Lady Gaga đều trên cùng một shard, shard đó sẽ bị overwhelmed cho thao tác đọc. Để giải quyết vấn đề này ta cần phải phân bổ một shard cho từng người nổi tiếng. Mỗi shard thậm chí có thể yêu cầu phân vùng thêm.
 - **Join và de-normalization**: Một khi cơ sở dữ liệu đã được chia nhỏ trên nhiều server, rất khó để thực hiện các thao tác JOIN trên các shard. Một giải pháp phổ biến là chuẩn hóa cơ sở dữ liệu để các truy vấn có thể được thực hiện trong một bảng duy nhất.
 
 Trong hình bên dưới, cơ sở dữ liệu shard hỗ trợ lượng truy cập dữ liệu tăng nhanh. Cùng thời điểm, mọt số hàm phi quan hệ được chuyển vào bộ dữ liệu NoSQL để giảm tải cơ sở dữ liệu. 
@@ -290,30 +289,30 @@ Trong hình bên dưới, cơ sở dữ liệu shard hỗ trợ lượng truy c�
 ## Hàng triệu người dùng và xa hơn thế nữa
 
 Mở rộng hệ thống là một vòng lặp vô tận. Mỗi lần lặp ta sẽ học được một điều gì đó mới. Cần điều chỉnh nhiều hơn với các chiến lược mới để mở rộng ra hàng triệu người dùng. Ví dụ: bạn có thể cần tối ưu hoá hệ thống của mình và tách hệ thống thành các dịch vụ nhỏ đồng đều hơn. Tất cả kỹ thuật đã học ở chương này cung cấp một nền tảng tốt để giải quyết các vấn đề mới. Ở cuối chương, ta có bản tốm tắt về những gì đã học:
-• Kiến trúc web stateless
-• Xây dựng bộ dự phòng ở mọi nơi
-• Bộ nhớ đệm càng nhiều càng tốt
-• Hỗ trợ đa trung tâm dữ liệu
-• Lưu tài nguyên tĩnh trên CDN
-• Mở rộng dữ liệu bằng sharding
-• Tách các tier trên nhiều thiết bị
-• Giám sát hệ thống và sử dụng các công cụ tự động hóa
+- Kiến trúc web stateless
+- Xây dựng bộ dự phòng ở mọi nơi
+- Bộ nhớ đệm càng nhiều càng tốt
+- Hỗ trợ đa trung tâm dữ liệu
+- Lưu tài nguyên tĩnh trên CDN
+- Mở rộng dữ liệu bằng sharding
+- Tách các tier trên nhiều thiết bị
+- Giám sát hệ thống và sử dụng các công cụ tự động hóa
 
 # Tham khảo
 
-[1] [Hypertext Transfer Protocol](https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol)
-[2] [Should you go Beyond Relational Databases?](https://blog.teamtreehouse.com/should-you-go-beyond-relational-databases)
-[3] [Replication](https://en.wikipedia.org/wiki/Replication_(computing))
-[4] [Multi-master replication](https://en.wikipedia.org/wiki/Multi-master_replication)
-[5] [NDB Cluster Replication: Multi-Master and Circular Replication]
+* [1] [Hypertext Transfer Protocol](https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol)
+* [2] [Should you go Beyond Relational Databases?](https://blog.teamtreehouse.com/should-you-go-beyond-relational-databases)
+* [3] [Replication](https://en.wikipedia.org/wiki/Replication_(computing))
+* [4] [Multi-master replication](https://en.wikipedia.org/wiki/Multi-master_replication)
+* [5] [NDB Cluster Replication: Multi-Master and Circular Replication]
 https://dev.mysql.com/doc/refman/5.7/en/mysql-cluster-replication-multi-master.html
-[6] [Caching Strategies and How to Choose the Right One](https://codeahoy.com/2017/08/11/caching-strategies-and-how-to-choose-the-right-one/)
-[7] R. Nishtala, "Facebook, Scaling Memcache at," 10th USENIX Symposium on Networked
+* [6] [Caching Strategies and How to Choose the Right One](https://codeahoy.com/2017/08/11/caching-strategies-and-how-to-choose-the-right-one/)
+* [7] R. Nishtala, "Facebook, Scaling Memcache at," 10th USENIX Symposium on Networked
 Systems Design and Implementation (NSDI ’13).
-[8] [Single point of failure](https://en.wikipedia.org/wiki/Single_point_of_failure)
-[9] [Amazon CloudFront Dynamic Content Delivery](https://aws.amazon.com/cloudfront/dynamic-content/)
-[10] [Configure Sticky Sessions for Your Classic Load Balancer](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-sticky-sessions.html)
-[11] [Active-Active for Multi-Regional Resiliency](https://netflixtechblog.com/active-active-for-multi-regional-resiliency-c47719f6685b)
-[12] [Amazon EC2 High Memory Instances](https://aws.amazon.com/ec2/instance-types/high-memory/)
-[13] [What it takes to run Stack Overflow](http://nickcraver.com/blog/2013/11/22/what-it-takes-to-run-stack-overflow)
-[14] [What The Heck Are You Actually Using NoSQL For](http://highscalability.com/blog/2010/12/6/what-the-heck-are-you-actually-using-nosqlfor.htm)
+* [8] [Single point of failure](https://en.wikipedia.org/wiki/Single_point_of_failure)
+* [9] [Amazon CloudFront Dynamic Content Delivery](https://aws.amazon.com/cloudfront/dynamic-content/)
+* [10] [Configure Sticky Sessions for Your Classic Load Balancer](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-sticky-sessions.html)
+* [11] [Active-Active for Multi-Regional Resiliency](https://netflixtechblog.com/active-active-for-multi-regional-resiliency-c47719f6685b)
+* [12] [Amazon EC2 High Memory Instances](https://aws.amazon.com/ec2/instance-types/high-memory/)
+* [13] [What it takes to run Stack Overflow](http://nickcraver.com/blog/2013/11/22/what-it-takes-to-run-stack-overflow)
+* [14] [What The Heck Are You Actually Using NoSQL For](http://highscalability.com/blog/2010/12/6/what-the-heck-are-you-actually-using-nosqlfor.htm)
