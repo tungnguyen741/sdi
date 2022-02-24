@@ -37,7 +37,7 @@ Như vậy ta có các yêu cầu sau:
 - Độ trễ thấp. Bộ giới hạn truy cập không nên chậm hơn thời gian phản hồi HTTP.
 - Sử dụng bộ nhớ ít nhất có thể.
 - Có thể chia sẻ trên nhiều server hay tiến trình.
-- Xử lý ngoại lệ. Hiển thị dọn dẹp ngoại lệ cho người dùng yêu cầu của họ bị điều tiết.
+- Xử lý ngoại lệ. Hiển thị dọn dẹp ngoại lệ cho người dùng khi yêu cầu của họ bị điều tiết.
 - Khả năng chịu lỗi cao. Bất kỳ sự cố nào với bộ giới hạn truy cập sẽ không ảnh hưởng đến toàn hệ thống.
 
 ## 2. Đề xuất thiết kế
@@ -58,9 +58,9 @@ Giả sử API của ta cho phép 2 yêu cầu trên một giây, và client g�
 
 ![](./assets/middleware2.png)
 
-Các microservices [4] đang trở nên phổ biến và bộ giới hạn truy cập thường được dùng cho triển khai trong API gateway. API gateway là dịch vụ quản lý hoàn toàn hỗ trợ giới hạn truy cập, chứng chỉ SSL, xác thực, IP được cho phép,... Bây giờ ta đã biệt API gateway là một dịch vụ hỗ trợ giới hạn truy cập.
+Các microservices [4] đang trở nên phổ biến và bộ giới hạn truy cập thường được dùng cho triển khai trong API gateway. API gateway là một dịch vụ quản lý hoàn toàn hỗ trợ giới hạn truy cập, chứng chỉ SSL, xác thực, IP được cho phép và nhiều hơn thế. Bây giờ ta đã biết API gateway là một dịch vụ hỗ trợ giới hạn truy cập.
 
-Khi thiết kế bộ giới hạn truy cập, câu hỏi quan trọng nhất cần trả lời là: "Đâu là nơi bộ giới hạn nên triển khai, ở server-side hay là trong gateway". Không có một câu trả lời hoàn chỉnh, nó tuỳ thuộc vào công ty mà bạn đang làm việc, các công nghệ hiện tại, nguồn tài nguyên, độ ưu tiên của mục tiên,... Ở đây ta có vài hướng dẫn phổ biến.
+Khi thiết kế bộ giới hạn truy cập, câu hỏi quan trọng nhất cần trả lời là: "Đâu là nơi bộ giới hạn nên triển khai, ở server-side hay là trong gateway". Không có một câu trả lời hoàn chỉnh, nó tuỳ thuộc vào công ty mà bạn đang làm việc, các công nghệ hiện tại, nguồn tài nguyên, độ ưu tiên của mục tiêu,... Ở đây ta có vài hướng dẫn phổ biến.
 - Đánh giá công nghệ hiện tại của bạn, chẳng hạn như ngôn ngữ lập trình, cache,... Đảm bảo rằng ngôn ngữ lập trình hiện tại của bạn hiệu quả để thực hiện giới hạn truy cập ở phía server.
 - Xác định thuật toán giới hạn truy cập phù hợp với nhu cầu doanh nghiệp. Khi bạn triển khai mọi thứ ở phía server, bạn có toàn quyền kiểm soát thuật toán. Tuy nhiên, sự lựa chọn có thể bị hạn chế nếu bạn dùng gateway bên thứ 3.
 - Nếu bạn sử dụng kiến trúc microservice bao gồm các API gateway trong thiết kế để thực hiện xác thức, lập danh sách IP cho phép,... bạn có thể thêm bộ giới hạn truy cập vào API gateway.
@@ -113,7 +113,7 @@ Vậy thì ta sẽ cần bao nhiêu bucket? Không có câu trả lời cố đ�
 
 **Thuật toán leaking bucket**
 
-Thuật toán này tương tự token bucket nhưng ngoại trừ việc các yêu cầu được xử lý theo tần suất cố định. Nó thường dùng triển khai hàng đợi FIFO. Thuật toán hoạt động như sau:
+Thuật toán này tương tự token bucket nhưng khác ở việc các yêu cầu được xử lý theo tần suất cố định. Nó thường dùng triển khai hàng đợi FIFO. Thuật toán hoạt động như sau:
 - Khi một yêu cầu đến, hệ thống kiểm tra nếu hàng đợi vẫn còn chỗ nó sẽ được thêm vào hàng đợi.
 - Ngược lại nó sẽ bị xoá.
 - Yêu cầu được lấy từ hàng đợi và xử lý.
@@ -132,14 +132,14 @@ Thuật toán nhận về hai tham số:
 1. Một loạt truy cập sẽ lấp đầy hàng đợi và với các yêu cầu cũ nếu chúng không được xử lý kịp thời, các yêu cầu gần nhất sẽ bị giới hạn truy cập.
 2. Có hai tham số trong thuật toán. Và không dễ dàng để điều chỉnh chúng đúng cách.
 
-*Thuận toán fixed window counter*
+**Thuận toán fixed window counter**
 
 Thuật toán hoạt động như sau:
 - Thuật toán chia dòng thời gian thành các cửa sổ thời gian cố định và gán một bộ đếm cho mỗi cửa sổ.
 - Mỗi yêu cầu sẽ tăng bộ đếm lên một.
-- Khi bộ đếm đạt đến ngưỡng được xác định trước, các yêu cầu mới sẽ bị loại bỏ cho đến khi cửa sổ thời gian mới bắt đầu.
+- Khi bộ đếm đạt đến ngưỡng đã được xác định trước, các yêu cầu mới sẽ bị loại bỏ cho đến khi cửa sổ thời gian mới bắt đầu.
 
-Ta lấy ví dụ cụ thể. Ở hình bên dưới đơn vị thời gian là 1s, hệ thống cho phép tối đa 3 yêu cầu trên một giây. Với mỗi cửa sổ thứ hai, nếu nhận được hơn 3 yêu cầu, các yêu cầu tiếp theo sẽ bị loại bỏ.
+Ta lấy ví dụ cụ thể. Ở hình bên dưới đơn vị thời gian là 1s, hệ thống cho phép tối đa 3 yêu cầu trên một giây. Từ cửa sổ thứ hai, nếu nhận được hơn 3 yêu cầu, các yêu cầu tiếp theo sẽ bị loại bỏ.
 
 ![](./assets/fixed-window.png)
 
@@ -160,31 +160,31 @@ Trong hình trên hệ thống cho phép tối đa 5 yêu cầu mỗi phút, đ�
 **Thuật toán Sliding window log**
 
 Như đã thảo luận trước đây, thuật toán fixed window counter có một vấn đề lớn là: nó cho phép nhiều yêu cầu hơn đi qua các cạnh của cửa sổ. Thuật toán sliding window log khắc phục vấn đề đó. Nó hoạt động như sau:
-- Thuật toán theo dõi các dấu thời gian của yêu cầu. Dữ liệu dấu thời gian thường được lưu trong bộ nhớ cache, chẳng hạn như các set được sắp xếp của Redis [8].
-- Khi có yêu cầu mới, hãy xóa tất cả các dấu thời gian đã lỗi thời. Dấu thời gian lỗi thời được định nghĩa là những dấu cũ hơn thời điểm bắt đầu của cửa sổ thời gian hiện tại.
-- Thêm dấu thời gian của yêu cầu mới vào log.
+- Thuật toán theo dõi các timestamp của yêu cầu. Dữ liệu timestamp thường được lưu trong bộ nhớ cache, chẳng hạn như các set được sắp xếp của Redis [8].
+- Khi có yêu cầu mới, hãy xóa tất cả các timestamp đã lỗi thời. Timestamp lỗi thời được định nghĩa là những timestamp cũ hơn thời điểm bắt đầu của cửa sổ thời gian hiện tại.
+- Thêm timestamp của yêu cầu mới vào log.
 - Nếu kích thước log bằng hoặc thấp hơn số lượng cho phép, một yêu cầu được chấp nhận.
 - Nếu không, nó bị từ chối.
 Ta có hình minh hoạ như sau:
 
 ![](./assets/slicing.png)
 
-Ở ví dụ này, bộ giới hạn truy cập cho phép 2 yêu cầu mỗi phút. Thông thường, dấu thời gian Linux được lưu ở log. Tuy nhiên, trong ví dụ này ta sử dụng biểu diễn thời gian dễ đọc hơn để dễ hiểu hơn.
+Ở ví dụ này, bộ giới hạn truy cập cho phép 2 yêu cầu mỗi phút. Thông thường, timestamp Linux được lưu ở log. Tuy nhiên, trong ví dụ này ta sử dụng biểu diễn thời gian dễ đọc hơn để dễ hiểu hơn.
 
 - Log trống khi yêu cầu mới đến vào lúc 1:00:01. Do đó yêu cầu được cho phép.
-- Một yêu cầu mới đến vào lúc 1:00:30, dấu thời gian 1:00:30 được lưu vào log. Sau khi lưu, kích cở log là 2 không lớn hơn con số cho phép. Do đó, yêu cầu vẫn được cho phép.
-- Yêu cầu mới đến vào lúc 1:00:50 và được thêm dấu thời gian vào log. Sau khi chèn, kích cỡ log là 3, lớn hơn 2. Nên yêu cầu này bị từ chối, mặc dù dấu thời gian vẫn còn trong log.
-- Yêu cầu mới đến vào lúc 1:01:40. Các yêu cầu trong khoảng [1:00:40, 1:01:40] nằm trong một khung thời gian, nhưng yêu cầu được gửi đến trước 1:00:40 đã lỗi thời. Hai dấu thời gian là 1:00:01 và 1:00:30 đều đã bị xoá khởi log. Do đó kích cở bây giờ là 2 nên yêu cầu được cho phép
+- Một yêu cầu mới đến vào lúc 1:00:30, timestamp 1:00:30 được lưu vào log. Sau khi lưu, kích cỡ log là 2 không lớn hơn con số cho phép. Do đó, yêu cầu vẫn được cho phép.
+- Yêu cầu mới đến vào lúc 1:00:50 và được thêm timestamp vào log. Sau khi chèn, kích cỡ log là 3, lớn hơn 2. Nên yêu cầu này bị từ chối, mặc dù timestamp vẫn còn trong log.
+- Yêu cầu mới đến vào lúc 1:01:40. Các yêu cầu trong khoảng [1:00:40, 1:01:40] nằm trong một khung thời gian, nhưng yêu cầu được gửi đến trước 1:00:40 đã lỗi thời. Hai timestamp là 1:00:01 và 1:00:30 đều đã bị xoá khởi log. Do đó kích cỡ bây giờ là 2 nên yêu cầu được cho phép
 
 *Ưu điểm*
 1. Giới hạn truy cập được thực hiện bởi thuật toán này là rất chính xác. Trong bất kỳ cửa sổ luân phiên nào, các yêu cầu sẽ không vượt quá giới hạn truy cập.
 
 *Nhược điểm*
-1. Thuật toán tiêu thụ nhiều bộ nhớ vì ngay cả khi yêu cầu bị từ chối, dấu thời gian của nó vẫn được lưu lại.
+1. Thuật toán tiêu thụ nhiều bộ nhớ vì ngay cả khi yêu cầu bị từ chối, timestamp của nó vẫn được lưu lại.
 
 **Thuật toán sliding window counter**
 
-Là cách tiếp cận kết hợp fixed window counter và sliding window log. Thuật toán có thể triển khai bằng hai cách khác nhau. Chúng ta sẽ chỉ giải thích một cách triển khai trong thôi, cách còn lại sẽ được cung cấp tài liệu tham khảo ở cuối bài.
+Là cách tiếp cận kết hợp fixed window counter và sliding window log. Thuật toán có thể triển khai bằng hai cách khác nhau. Chúng ta sẽ chỉ giải thích một cách triển khai trong bài viết này thôi, cách còn lại sẽ được cung cấp tài liệu tham khảo ở cuối bài.
 
 Ảnh dưới đây mô tả cách hoạt động của thuật toán
 
@@ -204,7 +204,7 @@ Do giới hạn về không gian, chúng ta sẽ không thảo luận về cách
 2. Nó làm giảm lượng truy cập tăng đột biến vì truy cập dựa trên tỷ lệ trung bình của cửa sổ trước đó.
 
 *Nhược điểm*
-1. Nó chỉ hoạt động đối với cửa sổ xem lại không quá nghiêm ngặt. Đây là giá trị gần đúng của tỷ lệ thực tế vì nó giả định các yêu cầu trong cửa sổ trước đó được phân phối đồng đều. Tuy nhiên, vấn đề này có thể không quá tệ như bạn tưởng. Theo các thử nghiệm được thực hiện bởi Cloudflare [10], chỉ có 0,003% yêu cầu được cho phép sai hoặc truy cập bị giới hạn trong số 400 triệu yêu cầu.
+1. Nó chỉ hoạt động đối với cửa sổ xem lại không quá nghiêm ngặt. Đây là giá trị gần đúng của truy cập thực tế vì nó giả định các yêu cầu trong cửa sổ trước đó được phân phối đồng đều. Tuy nhiên, vấn đề này có thể không quá tệ như bạn tưởng. Theo các thử nghiệm được thực hiện bởi Cloudflare [10], chỉ có 0,003% yêu cầu được cho phép sai hoặc truy cập bị giới hạn trong số 400 triệu yêu cầu.
 
 ### Kiến trúc high-level
 
@@ -219,7 +219,7 @@ Vậy ta sẽ lưu trữ bộ đếm ở đâu? Sử dụng cơ sở dữ liệu
 ![](./assets/architecture.png)
 
 1. Client gửi một yêu cầu đến middleware giới hạn truy cập.
-2. Middleware giới hạn truy cập tìm nạp counter tương ứng từ bucket trong Redis và kiểm trả có đến giới hạn hay không.
+2. Middleware giới hạn truy cập tìm nạp counter tương ứng từ bucket trong Redis và kiểm tra có đến giới hạn hay không.
     + Nếu đến giới hạn yêu cầu bị từ chối.
     + Nếu chưa đến giới hạn, yêu cầu được gửi đến API server. Đồng nghĩa, hệ thống tăng bộ đếm và lưu nó vào Redis.
 
@@ -227,9 +227,9 @@ Vậy ta sẽ lưu trữ bộ đếm ở đâu? Sử dụng cơ sở dữ liệu
 
 Ở thiết kế trên vẫn chưa trả lời hai cầu hỏi:
 - Quy tắc giới hạn được tạo như thế nào? Và sẽ lưu ở đâu?
-- LÀm sao để xử lý yêu cầu vượt quá giới hạn truy cập?
+- Làm sao để xử lý yêu cầu vượt quá giới hạn truy cập?
 
-Trong phần này, trước tiên chúng tôi sẽ trả lời các câu hỏi liên quan đến quy tắc giới hạn truy cập và sau đó xem xét các chiến lược để xử lý các yêu cầu vượt quá giới hạn truy cập. Cuối cùng, chúng ta sẽ thảo luận về giới hạn truy cập trong môi trường phân tán, thiết kế chi tiết, tối ưu hóa hiệu suất và giám sát.
+Trong phần này, trước tiên chúng ta sẽ trả lời các câu hỏi liên quan đến quy tắc giới hạn truy cập và sau đó xem xét các chiến lược để xử lý các yêu cầu vượt quá giới hạn truy cập. Cuối cùng, chúng ta sẽ thảo luận về giới hạn truy cập trong môi trường phân tán, thiết kế chi tiết, tối ưu hóa hiệu suất và giám sát.
 
 ### Quy tắc giới hạn truy cập
 
@@ -270,9 +270,9 @@ Làm thế nào để một client biết liệu nó có đang được điều 
 Câu trả lời nằm trong header của phản hồi HTTP. Bộ giới hạn truy cập trả về các Header HTTP sau cho client:
 - `X-Ratelimit-Remaining`: số lượng yêu cầu còn lại được cho phép trong cửa sổ.
 - `X-Ratelimit-Limit`: nó biểu thị số lượng lần gọi client có thể thực hiện trên mỗi cửa sổ thời gian.
-- `X-Ratelimit-Retry-After`: số lượng giay để đợi cho đến khi bạn có thể thực hiện yêu cầu lại, mà không bị điều tiết.
+- `X-Ratelimit-Retry-After`: số lượng giây để đợi cho đến khi bạn có thể thực hiện yêu cầu lại, mà không bị điều tiết.
 
-Khi người dùng gửi quá nhiều yêu cầu, 429 và header `X-Ratelimit-Retry-After` sẽ được trả về cho client.
+Khi người dùng gửi quá nhiều yêu cầu, lỗi 429 và header `X-Ratelimit-Retry-After` sẽ được trả về cho client.
 
 ### Thiết kế chi tiết
 
@@ -280,7 +280,7 @@ Khi người dùng gửi quá nhiều yêu cầu, 429 và header `X-Ratelimit-Re
 
 - Quy tắc được lưu trên ổ đĩa. Worker thường xuyên lấy quy tắc từ đĩa và lưu trữ chúng trong cache.
 - Khi một client gửi yêu cầu đến server, yêu cầu đó sẽ được gửi đến middleware giới hạn truy cập trước.
-- Middleware giới hạn truy cập tải quy tắc từ cache. Nó nạp bộ đếm và dấu thời gian yêu cầu cuối cùng từ cache (Redis). Dựa vào phản hồi, bộ giới hạn truy cập quyết định:
+- Middleware giới hạn truy cập tải quy tắc từ cache. Nó nạp bộ đếm và timestamp yêu cầu cuối cùng từ cache (Redis). Dựa vào phản hồi, bộ giới hạn truy cập quyết định:
     + Nếu yêu cầu không quá hạn, nó sẽ gửi đến API server.
     + Nếu yêu cầu quá hạn, sẽ trả về lỗi 429, đồng thời yêu cầu sẽ bị xoá bỏ hoặc đưa vào hàng đợi.
 
@@ -319,11 +319,11 @@ Một giải pháp khả thi là sử dụng các session cố định cho phép
 
 Tối ưu hóa hiệu suất là một chủ đề phổ biến trong các cuộc phỏng vấn thiết kế hệ thống. Ở đây ta sẽ đề cập đến hai lĩnh vực cần cải thiện.
 
-Đầu tiên, thiết lập đa trung tâm dữ liệu là rất quan trọng đối với bộ giới hạn truy cập vì độ trễ cao đối với những người dùng ở cách xa trung tâm dữ liệu. Hầu hết các nhà cung cấp dịch vụ đám mây đều xây dựng nhiều server ở vị trí biên trên khắp thế giới. Ví dụ: tính đến ngày 20 tháng 5 năm 2020, Cloudflare có 194 server biên được phân phối theo địa lý [14]. Lưu lượng truy cập được tự động chuyển đến server biên gần nhất để giảm độ trễ.
+Đầu tiên, thiết lập đa trung tâm dữ liệu là rất quan trọng đối với bộ giới hạn truy cập vì độ trễ cao đối với những người dùng ở cách xa trung tâm dữ liệu. Hầu hết các nhà cung cấp dịch vụ đám mây đều xây dựng nhiều [edge server](https://www.stackpath.com/edge-academy/what-is-an-edge-server) trên khắp thế giới. Ví dụ: tính đến ngày 20 tháng 5 năm 2020, Cloudflare có 194 edge server được phân phối theo địa lý [14]. Lưu lượng truy cập được tự động chuyển đến edge server gần nhất để giảm độ trễ.
 
 ![](./assets/perfomance.png)
 
-Thứ hai, đồng bộ hóa dữ liệu với một mô hình nhất quán cuối cùng. Nếu bạn không rõ về mô hình nhất quán cuối cùng, hãy tham khảo phần trong "Chương 6: Thiết kế bộ lưu trữ key-value".
+Thứ hai, đồng bộ hóa dữ liệu với một mô hình nhất quán cuối cùng. Nếu bạn không rõ về mô hình nhất quán cuối cùng, hãy tham khảo phần trong "Chương 6: Thiết kế bộ lưu trữ key-value".(Mình sẽ dịch sau)
 
 ### Giám sát
 
@@ -331,7 +331,7 @@ Sau khi đặt bộ giới hạn truy cập, điều quan trọng là phải thu
 - Thuật toán giới hạn truy cập có hiệu quả.
 - Các quy tắc giới hạn truy cập có hiệu lực.
 
-Ví dụ: nếu các quy tắc giới hạn truy cập quá nghiêm ngặt, nhiều yêu cầu hợp lệ sẽ bị loại bỏ. Trong trường hợp này, chúng ta muốn nới lỏng các quy tắc một chút. Trong một ví dụ khác, chúng ta nhận thấy bộ giới hạn truy cập của ta trở nên vô hiệu khi có sự gia tăng đột ngột về lưu lượng truy cập như flash sales. Trong trường hợp này, chúng ta có thể thay thế thuật toán để hỗ trợ lưu lượng truy cập liên tục. Token bucket là một sự lựa chọn tốt ở đây.
+Ví dụ: nếu các quy tắc giới hạn truy cập quá nghiêm ngặt, nhiều yêu cầu hợp lệ sẽ bị loại bỏ. Trong trường hợp này, chúng ta muốn nới lỏng các quy tắc một chút. Trong một ví dụ khác, chúng ta nhận thấy bộ giới hạn truy cập của ta trở nên vô hiệu khi có sự gia tăng đột ngột về lưu lượng truy cập như flash sales ở các trang bán hàng. Trong trường hợp này, chúng ta có thể thay thế thuật toán để hỗ trợ lưu lượng truy cập liên tục. Token bucket là một sự lựa chọn tốt ở đây.
 
 ## 4. Tổng kết
 
@@ -350,14 +350,14 @@ Sau đó, chúng ta thảo luận về kiến ​​trúc hệ thống, bộ gi�
     + Mềm  (soft): Yêu cầu có thể vượt quá ngưỡng trong một thời gian ngắn.
 - Giới hạn truy cập ở các cấp độ khác nhau. Ở đây ta chỉ nói về giới hạn truy cập ở tầng ứng dụng (tầng 7: HTTP). Có thể giới hạn truy cập ở các tầng khác, ví dụ giới hạn truy cập theo địa chỉ IP bằng Iptables [15] (tầng 3).
 
-*Lưu ý*: Mô hình OSI có 7 tầng: 
-1. Physical layer
-2. Data link layer
-3. Network layer 
-4. Transport layer
-5. Session layer
-6. Presentation layer
-7. Application layer
+    *Lưu ý*: Mô hình OSI có 7 tầng: 
+    1. Physical layer
+    2. Data link layer
+    3. Network layer 
+    4. Transport layer
+    5. Session layer
+    6. Presentation layer
+    7. Application layer
 
 - Tránh bị giới hạn truy cập. Thiết kế cho client của bạn bằng các phương pháp hay nhất:
     + Sử dụng bộ đệm ẩn của client để tránh thực hiện các lệnh gọi API thường xuyên.
