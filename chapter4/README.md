@@ -77,17 +77,131 @@ Giới hạn truy cập có thể thực hiện bằng cách triển khai các t
 
 **Thuật toán token bucket**
 
-Thuật toán token bucket được sử dụng rộng rải để giới hạn truy cập. Nó đơn giản, dễ hiểu và được dùng phổ biến bởi các công ty như Amazon [5] và Stripe [6] đều sử dụng thuật toán này để điều tiết yêu cầu API.
+Thuật toán token bucket được sử dụng rộng rải để giới hạn truy cập. Nó đơn giản, dễ hiểu và được dùng phổ biến, các công ty như Amazon [5] và Stripe [6] đều sử dụng thuật toán này để điều tiết yêu cầu API.
 
 Thuật toán token bucket hoạt động như sau:
-- Một token bucket là một thùng chứa có dung lượng đã xác định trước. Các đồng token được đặt vào thùng theo định kỳ. Khi mà thùng đã đầy không có đồng nào được thêm vào. Như hình bên dưới, dung lượng thùng chứa là 4. Mỗi giây, bộ nạp sẽ đặt 2 token vào thùng. Khi thùng đầy các đồng token tiếp theo sẽ bị tràn.
+- Một bucket là một thùng chứa có dung lượng đã xác định trước. Các token là các đồng tiền được đặt vào theo định kỳ. Khi mà bucket đã đầy thì không có token nào được thêm vào. Như hình bên dưới, dung lượng bucket là 4. Mỗi giây, bộ nạp sẽ đặt 2 token vào. Khi bucket đầy các token tiếp theo sẽ bị tràn ra ngoài.
 
 ![](./assets/token-bucket.png)
 
-- Mỗi yêu cầu từ client là một token. Khi yêu cầu đến ta kiểm tra có token trong thùng có đủ không. 
-    + Nếu đã đủ ta lấy một token cho mỗi yêu cầu, yêu cầu đi tiếp đến server.
+- Mỗi yêu cầu từ client ứng với một token. Khi yêu cầu đến ta kiểm tra trong bucket có đủ token không. 
+    + Nếu đủ ta lấy một token cho mỗi yêu cầu, yêu cầu sẽ được xử lý tiếp.
     + Nếu không đủ, yêu cầu sẽ bị xoá.
 
 ![](./assets/token-request.png)
 
-Hình bên dưới minh hoạ cách tiêu thụ và nạp token cũng như logic hoạt động giới hạn truy cập.
+Hình bên dưới minh hoạ cách tiêu thụ và nạp token cũng như logic hoạt động của giới hạn truy cập.
+
+![](./assets/token-flow.png)
+
+Thuật toán token bucket nhận vào hai tham số:
+- Kích cỡ bucket: số lượng tối đa token ở trong một bucket.
+- Chu kỳ cấp phát: là số token được đặt vào bucket trong một giây.
+
+Vậy thì ta sẽ cần bao nhiêu bucket? Không có câu trả lời cố định, nó tuỳ thuộc vào quy tắc mà ta thiết lập giới hạn truy cập. Ở đây có một vài ví dụ:
+- Nếu ta cần các bucket khác nhau cho các API endpoint khác nhau. Ví dụ: một người dùng được cho phép đăng một bài viết một giây, có 150 người bạn một ngày và thích 5 bài viết một giây thì sẽ cần tới 3 bucket.
+- Nếu ta cần điều tiết các yêu cầu dựa trên địa chỉ IP thì mỗi địa chỉ IP cần một bucket.
+- Nếu hệ thống chỉ cho phép tối đa 10,000 yêu cầu trên một giây ta sẽ cần một bucket toàn cục chung cho tất cả yêu cầu.
+
+*Ưu điểm*
+1. Dễ dàng triển khai
+2. Lưu trữ hiệu quả
+3. Cho phép một loạt truy cập trong chu kỳ ngắn. Yêu cầu có thể được thực hiện miễn là vẫn còn token.
+
+*Nhược điểm*
+1. Hai tham số trong thuật toán là kích cỡ bucket và chu kỳ cấp phát. Tuy nhiên khá khó khăn để điều chỉnh chúng đúng cách.
+
+**Thuật toán leaking bucket**
+
+Thuật toán này tương tự token bucket nhưng ngoại trừ việc các yêu cầu được xử lý theo tần suất cố định. Nó thường dùng triển khai hàng đợi FIFO. Thuật toán hoạt động như sau:
+- Khi một yêu cầu đến, hệ thống kiểm tra nếu hàng đợi vẫn còn chỗ nó sẽ được thêm vào hàng đợi.
+- Ngược lại nó sẽ bị xoá.
+- Yêu cầu được lấy từ hàng đợi và xử lý.
+
+![](./assets/bucket.png)
+
+Thuật toán nhận về hai tham số:
+- Kích cỡ bucket: bằng với kích cỡ hàng đợi. Hàng đợi giữ yêu cầu cần được xử lý trong một tần suất cố định.
+- Tần suất thoát ra: nó xác định bao nhiêu yêu cầu sẽ được xử lý trong một tần suất cố định thường là giây.
+
+*Ưu điểm*
+1. Lưu trữ hiệu quả với kích cỡ hàng đợi giới hạn.
+2. Yêu cầu được xử lý trong một khoảng cố định do đó phù hợp với các trường hợp sử dụng cần tần suất thoát ra ổn định.
+
+*Nhược điểm*
+1. Một loạt truy cập sẽ lấp đầy hàng đợi và với các yêu cầu cũ nếu chúng không được xử lý kịp thời, các yêu cầu gần nhất sẽ bị giới hạn truy cập.
+2. Có hai tham số trong thuật toán. Và không dễ dàng để điều chỉnh chúng đúng cách.
+
+*Thuận toán fixed window counter*
+
+Thuật toán hoạt động như sau:
+- Thuật toán chia dòng thời gian thành các cửa sổ thời gian cố định và gán một bộ đếm cho mỗi cửa sổ.
+- Mỗi yêu cầu sẽ tăng bộ đếm lên một.
+- Khi bộ đếm đạt đến ngưỡng được xác định trước, các yêu cầu mới sẽ bị loại bỏ cho đến khi cửa sổ thời gian mới bắt đầu.
+
+Ta lấy ví dụ cụ thể. Ở hình bên dưới đơn vị thời gian là 1s, hệ thống cho phép tối đa 3 yêu cầu trên một giây. Với mỗi cửa sổ thứ hai, nếu nhận được hơn 3 yêu cầu, các yêu cầu tiếp theo sẽ bị loại bỏ.
+
+![](./assets/fixed-window.png)
+
+Một vấn đề lớn với thuật toán này là một loạt lưu lượng truy cập ở các cạnh của cửa sổ thời gian có thể gây ra nhiều yêu cầu hơn định mức cho phép. Hãy xem xét trường hợp sau:
+
+![](./assets/fixed-flow.png)
+
+Trong hình trên hệ thống cho phép tối đa 5 yêu cầu mỗi phút, định mức khả dụng đặt lại gần bằng phút. Và có 5 yêu cầu trong khoảng thời gian từ 2:00:00 đến 2:01:00 và 5 yêu cầu khác trong khoảng 2:01:00 đến 2:02:00. Đối với khoảng thời gian một phút từ 2:00:30 đến 2:01:30, thì lại có 10 yêu cầu. Gấp đôi với số yêu cầu được cho phép.
+
+*Ưu điểm*
+1. Lưu trữ hiệu quả
+2. Dễ hiểu
+3. Đặt lại định mức khả dụng vào cuối cửa sổ đơn vị thời gian phù hợp với một số trường hợp sử dụng nhất định.
+
+*Nhược điểm*
+1. Lưu lượng truy cập tăng vọt ở các cạnh của cửa sổ có thể gây ra nhiều yêu cầu hơn định mức cho phép.
+
+**Thuật toán Sliding window log**
+
+Như đã thảo luận trước đây, thuật toán fixed window counter có một vấn đề lớn là: nó cho phép nhiều yêu cầu hơn đi qua các cạnh của cửa sổ. Thuật toán sliding window log khắc phục vấn đề đó. Nó hoạt động như sau:
+- Thuật toán theo dõi các dấu thời gian của yêu cầu. Dữ liệu dấu thời gian thường được lưu trong bộ nhớ cache, chẳng hạn như các set được sắp xếp của Redis [8].
+- Khi có yêu cầu mới, hãy xóa tất cả các dấu thời gian đã lỗi thời. Dấu thời gian lỗi thời được định nghĩa là những dấu cũ hơn thời điểm bắt đầu của cửa sổ thời gian hiện tại.
+- Thêm dấu thời gian của yêu cầu mới vào log.
+- Nếu kích thước log bằng hoặc thấp hơn số lượng cho phép, một yêu cầu được chấp nhận.
+- Nếu không, nó bị từ chối.
+Ta có hình minh hoạ như sau:
+
+![](./assets/slicing.png)
+
+Ở ví dụ này, bộ giới hạn truy cập cho phép 2 yêu cầu mỗi phút. Thông thường, dấu thời gian Linux được lưu ở log. Tuy nhiên, trong ví dụ này ta sử dụng biểu diễn thời gian dễ đọc hơn để dễ hiểu hơn.
+
+- Log trống khi yêu cầu mới đến vào lúc 1:00:01. Do đó yêu cầu được cho phép.
+- Một yêu cầu mới đến vào lúc 1:00:30, dấu thời gian 1:00:30 được lưu vào log. Sau khi lưu, kích cở log là 2 không lớn hơn con số cho phép. Do đó, yêu cầu vẫn được cho phép.
+- Yêu cầu mới đến vào lúc 1:00:50 và được thêm dấu thời gian vào log. Sau khi chèn, kích cỡ log là 3, lớn hơn 2. Nên yêu cầu này bị từ chối, mặc dù dấu thời gian vẫn còn trong log.
+- Yêu cầu mới đến vào lúc 1:01:40. Các yêu cầu trong khoảng [1:00:40, 1:01:40] nằm trong một khung thời gian, nhưng yêu cầu được gửi đến trước 1:00:40 đã lỗi thời. Hai dấu thời gian là 1:00:01 và 1:00:30 đều đã bị xoá khởi log. Do đó kích cở bây giờ là 2 nên yêu cầu được cho phép
+
+*Ưu điểm*
+1. Giới hạn truy cập được thực hiện bởi thuật toán này là rất chính xác. Trong bất kỳ cửa sổ luân phiên nào, các yêu cầu sẽ không vượt quá giới hạn truy cập.
+
+*Nhược điểm*
+1. Thuật toán tiêu thụ nhiều bộ nhớ vì ngay cả khi yêu cầu bị từ chối, dấu thời gian của nó vẫn được lưu lại.
+
+**Thuật toán sliding window counter**
+
+Là cách tiếp cận kết hợp fixed window counter và sliding window log. Thuật toán có thể triển khai bằng hai cách khác nhau. Chúng ta sẽ chỉ giải thích một cách triển khai trong thôi, cách còn lại sẽ được cung cấp tài liệu tham khảo ở cuối bài.
+
+Ảnh dưới đây mô tả cách hoạt động của thuật toán
+
+![](./assets/siding.png)
+
+Giả sử bộ giới hạn truy cập cho phép tối đa 7 yêu cầu mỗi phút và có 5 yêu cầu trong phút trước và 3 yêu cầu trong phút hiện tại. Đối với một yêu cầu mới đến vị trí 30% trong phút hiện tại, số lượng yêu cầu trong cửa sổ luân phiên được tính bằng công thức sau:
+> Số yêu cầu ở cửa sổ hiện tại + số yêu cầu ở cửa số trước * phần trăm chồng chéo của cửa sổ luân phiên và cửa sổ trước đó.
+
+Sử dụng công thức trên ta có `3 + 5 * 0.7% = 6.5` yêu cầu. Tuỳ vào trường hợp mà con số có thể được làm tròn lên hoặc xuống. Ở đây ta làm tròn xuống còn 6.
+
+Vì bộ giới hạn truy cập cho phép tối đa 7 yêu cầu mỗi phút, nên yêu cầu hiện tại có thể được thực hiện. Tuy nhiên, giới hạn sẽ đạt được sau khi nhận được thêm một yêu cầu.
+
+Do giới hạn về không gian, chúng ta sẽ không thảo luận về cách triển khai khác ở đây. Bạn đọc quan tâm có thể tham khảo tài liệu tham khảo [9]. Thuật toán này tuy là cải tiến và kết hợp của hai thuật toán trên nhưng nó không hoàn hảo. Nó có ưu và nhược điểm sau:
+
+*Ưu điểm*
+1. Lưu trữ hiệu quả
+2. Nó làm giảm lượng truy cập tăng đột biến vì truy cập dựa trên tỷ lệ trung bình của cửa sổ trước đó.
+
+*Nhược điểm*
+1. Nó chỉ hoạt động đối với cửa sổ xem lại không quá nghiêm ngặt. Đây là giá trị gần đúng của tỷ lệ thực tế vì nó giả định các yêu cầu trong cửa sổ trước đó được phân phối đồng đều. Tuy nhiên, vấn đề này có thể không quá tệ như bạn tưởng. Theo các thử nghiệm được thực hiện bởi Cloudflare [10], chỉ có 0,003% yêu cầu được cho phép sai hoặc truy cập bị giới hạn trong số 400 triệu yêu cầu.
