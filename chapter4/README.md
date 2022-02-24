@@ -205,3 +205,164 @@ Do giới hạn về không gian, chúng ta sẽ không thảo luận về cách
 
 *Nhược điểm*
 1. Nó chỉ hoạt động đối với cửa sổ xem lại không quá nghiêm ngặt. Đây là giá trị gần đúng của tỷ lệ thực tế vì nó giả định các yêu cầu trong cửa sổ trước đó được phân phối đồng đều. Tuy nhiên, vấn đề này có thể không quá tệ như bạn tưởng. Theo các thử nghiệm được thực hiện bởi Cloudflare [10], chỉ có 0,003% yêu cầu được cho phép sai hoặc truy cập bị giới hạn trong số 400 triệu yêu cầu.
+
+### Kiến trúc high-level
+
+Ý tưởng cơ bản của thuật toán giới hạn truy cập khá đơn giản. Ở high-level, ta cần một bộ đếm để theo dõi số lượng yêu cầu được gửi từ cùng một user, địa chỉ IP,... Nếu bộ đếm lớn hơn giới hạn, yêu cầu sẽ không được cho phép.
+
+Vậy ta sẽ lưu trữ bộ đếm ở đâu? Sử dụng cơ sở dữ liệu không phải một ý tưởng tốt vì truy cập ổ đĩa của nó rất chậm. Bộ nhớ cache sẽ là một lựa chọn tốt hơn vì nó nhanh và hỗ trợ chiến lược hết hạn dựa trên thời gian. Ví dụ Redis [11] là một lựa chọn phổ biến để triển khai giới hạn truy cập. Nó là một bộ nhớ lưu trữ với hai lệnh: INCR và EXPIRE.
+- INCR: nó sẽ tăng bộ đếm lưu trữ lên 1 đơn vị.
+- EXPIRE: nó thiết lập thời gian cho counter. Khi thời gian hết hạn bộ đếm tự động bị xoá.
+
+Ảnh dưới đây mô tả kiến trúc high-level cho giới hạn truy cập:
+
+![](./assets/architecture.png)
+
+1. Client gửi một yêu cầu đến middleware giới hạn truy cập.
+2. Middleware giới hạn truy cập tìm nạp counter tương ứng từ bucket trong Redis và kiểm trả có đến giới hạn hay không.
+    + Nếu đến giới hạn yêu cầu bị từ chối.
+    + Nếu chưa đến giới hạn, yêu cầu được gửi đến API server. Đồng nghĩa, hệ thống tăng bộ đếm và lưu nó vào Redis.
+
+## 3. Đi sâu vào thiết kế
+
+Ở thiết kế trên vẫn chưa trả lời hai cầu hỏi:
+- Quy tắc giới hạn được tạo như thế nào? Và sẽ lưu ở đâu?
+- LÀm sao để xử lý yêu cầu vượt quá giới hạn truy cập?
+
+Trong phần này, trước tiên chúng tôi sẽ trả lời các câu hỏi liên quan đến quy tắc giới hạn truy cập và sau đó xem xét các chiến lược để xử lý các yêu cầu vượt quá giới hạn truy cập. Cuối cùng, chúng ta sẽ thảo luận về giới hạn truy cập trong môi trường phân tán, thiết kế chi tiết, tối ưu hóa hiệu suất và giám sát.
+
+### Quy tắc giới hạn truy cập
+
+Lyft [12] đã công khai mã nguồn của thành phần giới hạn truy cập của họ. Ta sẽ xem xét bên trong các thành phần này và một số ví dụ về quy tắc giới hạn truy cập:
+
+```
+domain: messaging
+descriptors:
+    - key: message_type
+    Value: marketing
+    rate_limit:
+        unit: day
+        requests_per_unit: 5
+```
+
+Trong ví dụ trên, hệ thống cấu hình cho phép tối đa 5 thông điệp marketing mỗi ngày. Một ví dụ khác:
+
+```
+domain: auth
+descriptors:
+    - key: auth_type
+    Value: login
+    rate_limit:
+        unit: minute
+        requests_per_unit: 5
+```
+
+Quy tắc này cho thấy rằng client không được phép đăng nhập quá 5 lần trong 1 phút. Các quy tắc thường được viết trong các file cấu hình và được lưu trên đĩa.
+
+### Vượt quá giới hạn truy cập
+
+Trong trường hợp yêu cầu đã quá hạn, API trả về HTTP status code 429 cho client. Tuỳ vào trường hợp mà ta có thể đưa các yêu cầu quá hạn vào một hàng đợi để xử lý sau đó. Ví dụ, nếu một số đơn đặt hàng bị giới hạn truy cập do hệ thống quá tải, chúng ta có thể giữ lại các đơn đặt hàng đó để xử lý sau.
+
+#### Rate limiter headers
+
+Làm thế nào để một client biết liệu nó có đang được điều tiết hay không? Và làm thế nào để client biết được số lượng yêu cầu còn lại được phép trước khi bị điều tiết?
+
+Câu trả lời nằm trong header của phản hồi HTTP. Bộ giới hạn truy cập trả về các Header HTTP sau cho client:
+- `X-Ratelimit-Remaining`: số lượng yêu cầu còn lại được cho phép trong cửa sổ.
+- `X-Ratelimit-Limit`: nó biểu thị số lượng lần gọi client có thể thực hiện trên mỗi cửa sổ thời gian.
+- `X-Ratelimit-Retry-After`: số lượng giay để đợi cho đến khi bạn có thể thực hiện yêu cầu lại, mà không bị điều tiết.
+
+Khi người dùng gửi quá nhiều yêu cầu, 429 và header `X-Ratelimit-Retry-After` sẽ được trả về cho client.
+
+### Thiết kế chi tiết
+
+![](./assets/detail.png)
+
+- Quy tắc được lưu trên ổ đĩa. Worker thường xuyên lấy quy tắc từ đĩa và lưu trữ chúng trong cache.
+- Khi một client gửi yêu cầu đến server, yêu cầu đó sẽ được gửi đến middleware giới hạn truy cập trước.
+- Middleware giới hạn truy cập tải quy tắc từ cache. Nó nạp bộ đếm và dấu thời gian yêu cầu cuối cùng từ cache (Redis). Dựa vào phản hồi, bộ giới hạn truy cập quyết định:
+    + Nếu yêu cầu không quá hạn, nó sẽ gửi đến API server.
+    + Nếu yêu cầu quá hạn, sẽ trả về lỗi 429, đồng thời yêu cầu sẽ bị xoá bỏ hoặc đưa vào hàng đợi.
+
+### Bộ giới hạn truy cập trong môi trường phân tán
+
+Xây dựng bộ giới hạn truy cập hoạt động trong một môi trường server duy nhất không khó. Tuy nhiên việc mở rộng hệ thống để hỗ trợ nhiều server và luồng đồng thời là một câu chuyện khác. Nó có hai thứ thách:
+- Race condition.
+- Vấn đề đồng bộ.
+
+#### Race condition
+
+Như đã thảo luận trước, bộ giới hạn truy cập hoạt động ở high-level:
+- Đọc bộ đếm từ Redis.
+- Kiểm tra xem `(counter+1)` có vượt ngưỡng hay không.
+- Nếu không, tăng bộ đếm lên một đơn vị trong Redis.
+
+Nó xảy ra ở các môi trường đồng thời cao
+
+![](./assets/condition.png)
+
+Giả sử giá trị bộ đếm trong Redis là 3. Nếu hai yêu cầu đồng thời đọc giá trị bộ đếm trước khi một trong hai yêu cầu ghi giá trị trở lại, mỗi yêu cầu sẽ tăng bộ đếm lên một và ghi nó trở lại mà không cần kiểm tra luồng kia. Cả hai yêu cầu (luồng) đều tin rằng chúng có giá trị bộ đếm chính xác là 4. Tuy nhiên, giá trị bộ đếm chính xác phải là 5.
+
+Lock là giải pháp rõ ràng nhất để giải quyết tình trạng xung đột. Tuy nhiên, lock sẽ làm chậm hệ thống đáng kể. Hai chiến lược thường được sử dụng để giải quyết vấn đề là : Lua script [13] và cấu trúc dữ liệu set đã sắp xếp trong Redis [8]. Đối với độc giả quan tâm đến các chiến lược này, có thể tham khảo các tài liệu tham khảo tương ứng [8] [13].
+
+#### Vấn đề đồng bộ
+
+Đồng bộ hóa là một yếu tố quan trọng khác cần xem xét trong môi trường phân tán. Để hỗ trợ hàng triệu người dùng, một server giới hạn truy cập có thể không đủ để xử lý lưu lượng truy cập. Khi nhiều server giới hạn truy cập được sử dụng, cần phải đồng bộ hóa. Ví dụ: ở bên trái của hình bên dưới, client 1 gửi yêu cầu đến bộ giới hạn truy cập 1 và client 2 gửi yêu cầu tới bộ giới hạn truy cập 2. Vì web tier là stateless, client có thể gửi yêu cầu đến bộ giới hạn truy cập khác như hình minh họa ở phía bên phải. Nếu không có đồng bộ hóa xảy ra, bộ giới hạn truy cập 1 không chứa bất kỳ dữ liệu nào về client 2. Do đó, bộ giới hạn truy cập không thể hoạt động bình thường.
+
+![](./assets/stateless.png)
+
+Một giải pháp khả thi là sử dụng các session cố định cho phép client gửi lưu lượng truy cập đến cùng một bộ giới hạn truy cập. Giải pháp này không được khuyến khích vì nó không có khả năng mở rộng cũng như không linh hoạt. Một cách tiếp cận tốt hơn là sử dụng các bộ dữ liệu tập trung như Redis. Thiết kế được thể hiện trong hình bên dưới.
+
+![](./assets/central.png)
+
+### Tối ưu hoá hiệu suất
+
+Tối ưu hóa hiệu suất là một chủ đề phổ biến trong các cuộc phỏng vấn thiết kế hệ thống. Ở đây ta sẽ đề cập đến hai lĩnh vực cần cải thiện.
+
+Đầu tiên, thiết lập đa trung tâm dữ liệu là rất quan trọng đối với bộ giới hạn truy cập vì độ trễ cao đối với những người dùng ở cách xa trung tâm dữ liệu. Hầu hết các nhà cung cấp dịch vụ đám mây đều xây dựng nhiều server ở vị trí biên trên khắp thế giới. Ví dụ: tính đến ngày 20 tháng 5 năm 2020, Cloudflare có 194 server biên được phân phối theo địa lý [14]. Lưu lượng truy cập được tự động chuyển đến server biên gần nhất để giảm độ trễ.
+
+![](./assets/perfomance.png)
+
+Thứ hai, đồng bộ hóa dữ liệu với một mô hình nhất quán cuối cùng. Nếu bạn không rõ về mô hình nhất quán cuối cùng, hãy tham khảo phần trong "Chương 6: Thiết kế bộ lưu trữ key-value".
+
+### Giám sát
+
+Sau khi đặt bộ giới hạn truy cập, điều quan trọng là phải thu thập dữ liệu phân tích để kiểm tra xem bộ giới hạn truy cập có hiệu quả hay không. Trước hết, chúng ta phải đảm bảo:
+- Thuật toán giới hạn truy cập có hiệu quả.
+- Các quy tắc giới hạn truy cập có hiệu lực.
+
+Ví dụ: nếu các quy tắc giới hạn truy cập quá nghiêm ngặt, nhiều yêu cầu hợp lệ sẽ bị loại bỏ. Trong trường hợp này, chúng ta muốn nới lỏng các quy tắc một chút. Trong một ví dụ khác, chúng ta nhận thấy bộ giới hạn truy cập của ta trở nên vô hiệu khi có sự gia tăng đột ngột về lưu lượng truy cập như flash sales. Trong trường hợp này, chúng ta có thể thay thế thuật toán để hỗ trợ lưu lượng truy cập liên tục. Token bucket là một sự lựa chọn tốt ở đây.
+
+## 4. Tổng kết
+
+Trong bài viết này, chúng ta đã thảo luận về các thuật toán khác nhau về giới hạn truy cập và ưu/nhược điểm của chúng.
+
+Các thuật toán được thảo luận bao gồm
+- Token bucket
+- Leaking bucket
+- Fixed window
+- Sliding window log
+- Sliding window counter
+
+Sau đó, chúng ta thảo luận về kiến ​​trúc hệ thống, bộ giới hạn truy cập trong môi trường phân tán, tối ưu hóa hiệu suất và giám sát. Tương tự như bất kỳ câu hỏi phỏng vấn thiết kế hệ thống nào, có những điểm cần nói thêm mà bạn có thể đề cập nếu thời gian cho phép:
+- Giới hạn truy cập cứng và mềm:
+    + Cứng (hard): Số lượng yêu cầu không được vượt quá ngưỡng.
+    + Mềm  (soft): Yêu cầu có thể vượt quá ngưỡng trong một thời gian ngắn.
+- Giới hạn truy cập ở các cấp độ khác nhau. Ở đây ta chỉ nói về giới hạn truy cập ở tầng ứng dụng (tầng 7: HTTP). Có thể giới hạn truy cập ở các tầng khác, ví dụ giới hạn truy cập theo địa chỉ IP bằng Iptables [15] (tầng 3).
+
+*Lưu ý*: Mô hình OSI có 7 tầng: 
+1. Physical layer
+2. Data link layer
+3. Network layer 
+4. Transport layer
+5. Session layer
+6. Presentation layer
+7. Application layer
+
+- Tránh bị giới hạn truy cập. Thiết kế cho client của bạn bằng các phương pháp hay nhất:
+    + Sử dụng bộ đệm ẩn của client để tránh thực hiện các lệnh gọi API thường xuyên.
+    + Hiểu rõ giới hạn và không gửi quá nhiều yêu cầu trong một khung thời gian ngắn.
+    + Bao gồm code để xử lý các ngoại lệ hoặc lỗi để client của bạn có thể khôi phục một cách gọn gàng khỏi các trường hợp ngoại lệ.
+    + Thêm đủ thời gian tắt để thử lại logic.
+
+Như vậy là ta đã hiểu cơ bản về thiết kế bộ giới hạn truy cập. Hẹn gặp lại ở các bài kế tiếp.
