@@ -139,4 +139,14 @@ Nếu có thêm thời gian vào cuối cuộc phỏng vấn, đây là một s�
 - Điều chỉnh độ dài phần. Ví dụ, ít bit sequence number hơn nhưng nhiều bit timestamp hơn có hiệu quả cho các ứng dụng đồng thời thấp và dài hạn.
 - Tính sẵn sàng cao. Vì trình tạo ID là một hệ thống quan trọng, nó phải có tính sẵn sàng cao.
 
-Chúc mừng bạn đã đạt được điều này đến nay! Bây giờ hãy tự vỗ về lưng mình. Làm tốt lắm!
+Chúc mừng bạn đã đạt được điều này đến nay! Bây giờ hãy tự vỗ về lưng mình. Làm tốt lắm
+
+# Tham khảo
+
+[1] Universally unique identifier: https://en.wikipedia.org/wiki/Universally_unique_identifier
+
+[2] Ticket Servers: Distributed Unique Primary Keys on the Cheap: https://code.flickr.net/2010/02/08/ticket-servers-distributed-unique-primary-keys-on-thecheap/
+
+[3] Announcing Snowflake: https://blog.twitter.com/engineering/en_us/a/2010/announcingsnowflake.html
+
+[4] Network time protocol: https://en.wikipedia.org/wiki/Network_Time_Protocol
