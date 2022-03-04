@@ -6,7 +6,7 @@ Trong cặp "key-value", key (khoá) là duy nhất, và value (giá trị) liê
 - Khoá dạng thuần: "last_logged_in_at"
 - Khoá băm: 253DDEC4
 
-Giá trị của khoá có thể là chuỗi, danh sách, đối tượng,... Còn value thường được xử lý như một đối tượng trong bộ lưu trữ key-value, như Amazon dynamo [1], Memcached [2], Redis [3],..
+Khoá có thể là chuỗi, danh sách, đối tượng,... Còn giá trị thường được xử lý như một đối tượng trong bộ lưu trữ key-value, như Amazon dynamo [1], Memcached [2], Redis [3],...
 Đây là bảng dữ liệu mình hoạ trong bộ lưu trữ key-value:
 
 ![](./assets/table1.png)
@@ -20,7 +20,7 @@ Giá trị của khoá có thể là chuỗi, danh sách, đối tượng,... C�
 Không có thiết kế nào là hoàn hảo. Mỗi thiết kế đều có được sự cân bằng cụ thể về việc đọc, ghi và sử dụng bộ nhớ. Một sự cân bằng khác phải có được là sự cân bằng là giữa tính nhất quán và tính khả dụng. Trong chương này, chúng ta thiết kế một bộ lưu trữ key-value bao gồm các đặc điểm sau:
 - Kích thước của cặp key-value nhỏ: dưới 10 KB.
 - Khả năng lưu trữ dữ liệu lớn.
-- Tính sẵn sàng cao: Hệ thống đáp ứng nhanh chóng, ngay cả khi có sự cố.
+- Tính khả dụng cao: Hệ thống đáp ứng nhanh chóng, ngay cả khi có sự cố.
 - Khả năng mở rộng cao: Hệ thống có thể được mở rộng để hỗ trợ tập dữ liệu lớn.
 - Tự động mở rộng quy mô: Việc thêm/xóa các server phải tự động dựa trên lưu lượng truy cập.
 - Tính nhất quán có thể điều chỉnh được.
@@ -28,7 +28,7 @@ Không có thiết kế nào là hoàn hảo. Mỗi thiết kế đều có đư
 
 ### Server lưu trữ key-value duy nhất
 
-Phát triển bộ lưu trữ key-value nằm trong một server duy nhất khá dễ dàng. Cách tiếp cận thông thường là lưu trữ cặp key-value trong một bảng băm, nó giữ mọi thứ trong bộ nhớ. Mặc dù truy cập bộ nhớ nhanh, nhưng việc đặt tất cả mọi thứ vào bộ nhớ có thể bất khả thi vì không gian hạn chế. Hai cách tối ưu hoá có thể thực hiện để đặt vừa dữ liệu vào một server duy nhất là:
+Phát triển bộ lưu trữ key-value nằm trong một server duy nhất khá dễ dàng. Cách tiếp cận thông thường là lưu trữ cặp key-value trong một bảng băm, nó giữ mọi thứ trong bộ nhớ. Mặc dù truy cập bộ nhớ nhanh, nhưng việc đặt tất cả mọi thứ vào bộ nhớ có thể là bất khả thi vì không gian hạn chế. Hai cách tối ưu hoá có thể thực hiện để đặt vừa dữ liệu vào một server duy nhất là:
 - Nén dữ liệu
 - Chỉ lưu trữ dữ liệu thường xuyên dùng trong bộ nhớ phần còn lại lưu trên ổ đĩa.
 
@@ -77,7 +77,7 @@ Tuy nhiên, nếu chúng ta chọn tính khả dụng hơn tính nhất quán (h
 
 ### Thành phần hệ thống
 
-Ở chương này, ta sẽ thảo luận về các thành phần cốt lõi và kỹ thuật để xây dựng bộ lưu trữ key-value:
+Ở chương này, ta sẽ thảo luận về các thành phần và kỹ thuật cốt lõi để xây dựng bộ lưu trữ key-value:
 * Phân vùng dữ liệu
 * Sao chép dữ liệu
 * Tính nhất quán
@@ -108,17 +108,17 @@ Ví dụ, các server có dung lượng cao hơn được chỉ định với nh
 
 ### Sao chép dữ liệu
 
-Để đạt được tính khả dụng và độ tin cậy cao, dữ liệu phải được sao chép không đồng bộ qua N server, trong đó N là tham số có thể cấu hình. N server này được chọn theo logic sau: sau khi một khóa được ánh xạ tới một vị trí trên vòng băm, đi theo chiều kim đồng hồ từ vị trí đó và chọn N server đầu tiên trên vòng để lưu trữ các bản sao dữ liệu. Trong Hình 6-5 (N = 3), key0 được sao chép tại s1, s2 và s3.
+Để đạt được tính khả dụng và độ tin cậy cao, dữ liệu phải được sao chép bất đồng bộ qua N server, trong đó N là tham số có thể cấu hình. N server này được chọn theo logic sau: sau khi một khóa được ánh xạ tới một vị trí trên vòng băm, từ vị trí đó đi theo chiều kim đồng hồ và chọn N server đầu tiên trên vòng để lưu trữ các bản sao dữ liệu. Trong Hình 6-5 (N = 3), key0 được sao chép tại s1, s2 và s3.
 
 ![](./assets/replication.png)
 
 Với nút ảo, N nút đầu tiên trên vòng sẽ ít hơn N server thực. Để tránh điều này, ta chọn server không trùng khi thực hiện di chuyển theo chiều kim đồng hồ.
 
-Các nút trong cùng một trung tâm dữ liệu thường bị lỗi đồng thời do mất điện, sự cố mạng, thiên tai,... Để có độ tin cậy tốt hơn, các bản sao được đặt trong các trung tâm dữ liệu riêng biệt và các trung tâm dữ liệu được kết nối thông qua mạng tốc độ cao.
+Các nút trong cùng một trung tâm dữ liệu thường bị lỗi đồng thời do mất điện, sự cố mạng, thiên tai,... Để có độ tin cậy tốt hơn, các bản sao nên được đặt trong các trung tâm dữ liệu riêng biệt và các trung tâm dữ liệu được kết nối thông qua mạng tốc độ cao.
 
 ### Tính nhất quán
 
-Vì dữ liệu được sao chép tại nhiều nút, nên nó phải được đồng bộ hóa giữa các bản sao. Số lượng đồng thuận có thể đảm bảo tính nhất quán cho cả hoạt động đọc và ghi. Trước tiên, hãy thiết lập một vài định nghĩa.
+Vì dữ liệu được sao chép tại nhiều nút, nên nó phải được đồng bộ hóa giữa các bản sao. Số lượng đồng thuận tối thiểu - quorum consensus có thể đảm bảo tính nhất quán cho cả hoạt động đọc và ghi. Trước tiên, hãy thiết lập một vài định nghĩa.
 
 - N = số lượng bản sao
 - W = Một đại diện ghi có kích thước W. Để một thao tác ghi được coi là thành công, thao tác ghi phải được thừa nhận từ các bản sao W.
@@ -128,3 +128,220 @@ Ví dụ với N = 3
 
 ![](./assets/ack.png)
 
+W = 1 không có nghĩa là dữ liệu sẽ được ghi trên một server. Ví dụ, với cấu hình trên (hình 6-6), dữ liệu được sao chép ở s0, s1 và s2. W = 1 nghĩa là `coordinator` phải nhận ít nhất một ACK trước khi thực hiện thao tác ghi thành công. Ví dụ, nếu ta nhận một ACK từ s1, ta không cần đợi ACK từ s0 và s2. `Coordinator` sẽ hành động như một proxy giữa client và nút.
+
+Cấu hình của W, R và N là sự cân bằng điển hình giữa độ trễ và tính nhất quán. Nếu W = 1 hoặc R = 1, thao tác được trả về nhanh chóng vì một `coordinator` chỉ cần đợi phản hồi từ bất kỳ bản sao nào. 
+
+Nếu W hoặc R > 1, hệ thống cung cấp tính nhất quán tốt hơn, tuy nhiên truy vấn sẽ chậm hơn vì `coordinator` phải đợi phản hồi từ một bản sao chậm nhất.
+
+Nếu W + R > N, tính nhất quán được đảm bảo mạnh mẽ vì phải có ít nhất một nút chồng chéo có dữ liệu mới nhất để đảm bảo tính nhất quán.
+
+Làm cách nào để cấu hình N, W và R phù hợp với trường hợp của ta? Ở đây ta có vài thiết lập khả thi:
+- Nếu R = 1 và W = N, hệ thống được tối ưu hoá cho việc đọc nhanh.
+- Nếu W = 1 và R = N, hệ thống được tối ưu hoá cho việc ghi nhanh.
+- Nếu W + R > N, tính nhất quán mạnh mẽ (thường N = 3, W = R = 2).
+- Nếu W + R <= N, tính nhất quán không mạnh mẽ.
+
+Tùy theo yêu cầu, chúng ta có thể điều chỉnh các giá trị W, R, N để đạt được mức độ nhất quán mong muốn.
+
+### Mô hình nhất quán
+
+Mô hình nhất quán là một nhân tố khác cần xem xét khi thiết kế một bộ lưu trữ key-value. Một mô hình nhất quán định nghĩa mức độ nhất quán của dữ liệu, và tồn tại nhiều mô hình nhất quán có thể có:
+- Tính nhất quán cao: bất kỳ thao tác đọc nào đều trả về một giá trị tương ứng với kết quả của mục dữ liệu ghi được cập nhật gần nhất. Client không bao giờ thấy dữ liệu lỗi thời/cũ.
+- Tính nhất quán yếu: các thao tác đọc tiếp theo có thể không thấy giá trị cập nhật gần nhất.
+- Tính nhất quán sau cùng: đây là một dạng cụ thể của tính nhất quán yếu. Cho đủ thời gian, tất cả các bản cập nhật sẽ được lan truyền và tất cả các bản sao đều nhất quán.
+
+Tính nhất quán cao thường đạt được bằng cách buộc một bản sao không chấp nhận các lần đọc/ghi mới cho đến khi mọi bản sao đã đồng ý về việc ghi hiện tại. Cách tiếp cận này không lý tưởng cho các hệ thống có tính khả dụng cao vì nó có thể chặn các hoạt động mới. Dynamo và Cassandra áp dụng tính nhất quán sau cùng, đây là mô hình nhất quán được đề xuất cho bộ lưu trữ key-value của chúng ta. Từ việc ghi đồng thời, tính nhất quán sau cùng cho phép các giá trị không nhất quán xâm nhập vào hệ thống và buộc client phải đọc các giá trị để đối chiếu. Phần tiếp theo giải thích cách điều chỉnh hoạt động với versioning.
+
+### Giải pháp không nhất quán: versioning
+
+Sao chép mang lại tính khả dụng cao nhưng gây ra sự không nhất quán giữa các bản sao. Versioning và vector clock được sử dụng để giải quyết các vấn đề không nhất quán. Versioning có nghĩa là coi mỗi sửa đổi dữ liệu là một phiên bản dữ liệu bất biến mới. Trước khi nói về versioning, chúng ta hãy sử dụng một ví dụ để giải thích sự không nhất quán xảy ra như thế nào:
+
+Trong hình 6-7, cả hai nút bản sao n1 và n2 có cùng giá trị. Ta gọi giá trị này là giá trị gốc. Server 1 và server 2 nhận cùng giá trị cho thao tác *get("name")*.
+
+![](./assets/version1.png)
+
+Kế tiếp, server 1 thay đổi tên thành "johnSanFrancisco", và server2 đổi tên thành "johnNewYork" như hình 6-8. Hai thay đổi này được thực hiện đồng thời. Bây giờ, chúng ta có các giá trị xung đột được gọi là phiên bản v1 và v2.
+
+![](./assets/version2.png)
+
+Trong ví dụ này, giá trị ban đầu có thể bị bỏ qua vì các sửa đổi dựa trên giá trị đó. Tuy nhiên, không có cách nào rõ ràng để giải quyết xung đột của hai phiên bản cuối cùng. Để giải quyết vấn đề này, chúng ta cần một hệ thống tạo lập phiên bản có thể phát hiện và giải quyết xung đột. Vector clock là một kỹ thuật phổ biến để giải quyết vấn đề này. Bây giờ hãy kiểm tra cách hoạt động của vector clock.
+
+Một vector clock là một cặp **[server, version]** liên kết với một mục dữ liệu. Nó có thể dùng để kiểm tra nếu một phiên bản đi trước, thành công hoặc xung đột với phiên bản khác.
+
+Giả sử vector clock được biểu diễn bằng `D([S1, v1], [S2, v2],…, [Sn, vn])`, trong đó *D* là mục dữ liệu, *v1* là bộ đếm phiên bản và *s1* là số server,... Nếu mục dữ liệu *D* được ghi vào server *Si*, hệ thống phải thực hiện một trong các tác vụ sau.
+- Tăng `vi` nếu tồn tại `[Si, vi]`.
+- Nếu không, hãy tạo một mục mới `[Si, 1]`.
+
+Logic trừu tượng trên được giải thích bằng một ví dụ cụ thể như trong Hình 6-9.
+
+![](./assets/logic.png)
+
+1. Một client ghi một mục dữ liệu D1 vào hệ thống và việc ghi được xử lý bởi server Sx, hiện có vector clock `D1[(Sx, 1)]`.
+2. Một client khác đọc D1 mới nhất, cập nhật nó lên D2 và viết nó trở lại. D2 đi xuống từ D1 nên nó ghi đè lên D1. Giả sử việc ghi được xử lý bởi cùng một server Sx, hiện có vector clock `D2([Sx, 2])`.
+3. Một client khác đọc D2 mới nhất, cập nhật nó lên D3 và viết nó trở lại. Giả sử việc ghi được xử lý bởi server Sy, hiện có vector clock `D3([Sx, 2], [Sy, 1]))`.
+4. Một client khác đọc D2 mới nhất, cập nhật nó lên D4 và viết lại. Giả sử việc ghi được xử lý bởi server Sz, hiện có `D4([Sx, 2], [Sz, 1]))`.
+5. Khi một client khác đọc D3 và D4, nó phát hiện ra xung đột, nguyên nhân là do mục dữ liệu D2 bị cả Sy và Sz sửa đổi. Xung đột được giải quyết bởi client và dữ liệu cập nhật được gửi đến server. Giả sử việc ghi được xử lý bởi Sx, bây giờ có
+`D5([Sx, 3], [Sy, 1], [Sz, 1])`. Chúng ta sẽ giải thích cách phát hiện xung đột ngay sau đây.
+
+Sử dụng vector clock, thật dễ dàng để nói rằng một phiên bản X là một tổ tiên (tức là không có xung đột) của phiên bản Y nếu các bộ đếm phiên bản(vi) cho mỗi thành phần tham gia trong vector clock của Y lớn hơn hoặc bằng với X. Ví dụ, vector clock `D([s0, 1], [s1, 1])]` là tổ tiên của `D([s0, 1], [s1, 2])`. Do đó, không có xung đột được ghi lại.
+
+Tương tự, bạn có thể nói rằng một phiên bản X là anh chị em (tức là có tồn tại xung đột) của Y nếu có bất kỳ thành phần tham gia nào trong vector clock của Y có bộ đếm nhỏ hơn hoặc bằng so với X. Ví dụ: hai sau vector clock cho biết có xung đột: `D([S0, 1], [S1, 2])` và `D([S0, 2], [S1, 1])`.
+
+Mặc dù vector clock có thể giải quyết xung đột, nhưng nó có hai nhược điểm đáng chú ý. Đầu tiên, vector clock thêm độ phức tạp cho client vì nó cần thực hiện logic giải quyết xung đột.
+
+Thứ hai, các cặp *[server: version]* trong vector clock có thể phát triển nhanh chóng. Để khắc phục sự cố này, chúng ta đặt một ngưỡng cho độ dài và nếu nó vượt quá giới hạn, các cặp cũ nhất sẽ bị xóa. Điều này có thể dẫn đến sự thiếu hiệu quả trong việc giải quyết xung đột vì các mối quan hệ về sau không thể được xác định chính xác. Tuy nhiên, dựa trên Dynamo [4], Amazon vẫn chưa gặp phải vấn đề này trong thực tế. Do đó, nó có lẽ là một giải pháp được chấp nhận cho hầu hết các công ty.
+
+### Xử lý failure
+
+Khi một hệ thống lớn được mở rộng, failure (sập hệ thống) là không thể tránh khỏi và nó còn rất phổ biến. Kịch bản cho xử lý failure là rất quan trọng, trong chương này ta sẽ giới thiệu kỹ thuật phát hiện failure và tìm giải pháp khác phục chung.
+
+#### Phát hiện failure
+
+Trong một hệ thống phân tán, không đủ để tin rằng một server không hoạt động vì một server khác nói như vậy. Thông thường, nó yêu cầu ít nhất hai nguồn thông tin độc lập để đánh dấu một server ngừng hoạt động.
+
+Như thể hiện trong Hình 6-10, multicasting all-to-all là một giải pháp đơn giản. Tuy nhiên, điều này không hiệu quả khi có nhiều server trong hệ thống.
+
+![](./assets/failure.png)
+
+Một giải pháp tốt hơn là sử dụng các phương pháp phát hiện failure phi tập trung như giao thức Gossip.
+Giao thức Gossip hoạt động như sau:
+- Mỗi nút duy trì danh sách thành viên nút, chứa ID thành viên và bộ đếm heartbeat.
+- Mỗi nút tăng định kỳ để tăng bộ đếm heartbeat của nó.
+- Mỗi nút định kỳ gửi heartbeat đến một tập hợp các nút ngẫu nhiên, lần lượt truyền sang một tập nút khác.
+- Khi các nút nhận được heartbeat, danh sách thành viên được cập nhật lên thông tin mới nhất.
+- Nếu heartbeat không tăng lên so với các giai đoạn đã xác định trước, thành viên được coi là ngoại tuyến.
+
+![](./assets/map.png)
+
+Như hình 6-11:
+- Nút s0 duy trì một danh sách thành viên ở bên trái.
+- Nút s0 thông báo với bộ đếm heartbeat của nút s2 (ID = 2) đã không tăng lên trong một thời gian dài.
+- Nút s0 gửi heartbeat bao gồm thông tin s2 cho một tập hợp nút ngẫu nhiên. Sau khi các nút khác xác nhận heartbeat của nút s2 đã không được cập nhật trong thời gian dài, s2 được đánh dấu là sập, và thông tin được lan truyền cho các nút khác.
+
+#### Xử lý failure tạm thời
+
+Sau khi các failure được phát hiện thông qua giao thức Gossip, hệ thống cần triển khai các cơ chế nhất định để đảm bảo tính khả dụng. Trong phương pháp tiếp cận strict quorum (tối thiểu nghiêm ngặt), các thao tác đọc và ghi có thể bị chặn như được minh họa trong phần số lượng đồng thuận tối thiểu.
+
+Một kỹ thuật được gọi là "sloppy quorum" [4] được sử dụng để cải thiện tính khả dụng. Thay vì thực thi yêu cầu tối thiểu, hệ thống chọn server W khỏe mạnh đầu tiên để ghi và server R khỏe mạnh đầu tiên để đọc trên vòng băm. Server ngoại tuyến bị bỏ qua.
+
+Nếu một server không khả dụng do lỗi mạng hoặc sập, một server khác sẽ tạm thời xử lý các yêu cầu. Khi server hoạt động trở lại, các thay đổi sẽ được đẩy lùi để đạt được tính nhất quán của dữ liệu. Quá trình này được gọi là hinted handoff. Vì s2 không có trong Hình 6-12 nên việc đọc và ghi sẽ do s3 tạm thời xử lý. Khi s2 trực tuyến trở lại, s3 sẽ giao lại dữ liệu cho s2.
+
+![](./assets/handling.png)
+
+#### Xử lý failure vĩnh viễn
+
+Hinted handoff được sử dụng để xử lý failure tạm thời. Điều gì sẽ xảy ra nếu một bản sao vĩnh viễn không có sẵn? Để xử lý tình huống như vậy, chúng ta triển khai một giao thức anti-entropy để giữ cho các bản sao được đồng bộ hóa. Anti-entropy liên quan đến việc so sánh từng phần dữ liệu trên các bản sao và cập nhật từng bản sao lên phiên bản mới nhất. Cây Merkle được sử dụng để phát hiện sự không nhất quán và giảm thiểu lượng dữ liệu được truyền.
+
+Trích dẫn từ Wikipedia [7]: 
+
+> "Cây băm hay cây Merkle là một cây trong đó mọi nút không phải là lá được gắn nhãn bằng băm của các nhãn hoặc giá trị (trong trường hợp là lá) của các nút con của nó. Cây băm cho phép xác minh hiệu quả và an toàn nội dung của cấu trúc dữ liệu lớn". Giả sử không gian chính là từ 1 đến 12, các bước sau đây trình bày cách xây dựng cây Merkle. Các hộp được đánh dấu cho biết sự không nhất quán.
+
+Bước 1: Chia không gian khóa thành các bucket (trong ví dụ của chúng ta là 4) như trong hình 6-13. Một bucket được sử dụng làm nút gốc để duy trì độ sâu giới hạn của cây.
+
+![](./assets/step1.png)
+
+Bước 2: Sau khi các bucket được tạo, hãy băm từng khóa trong một bucket bằng phương pháp băm thống nhất (Hình 6-14).
+
+![](./assets/step2.png)
+
+Bước 3: Tạo một nút băm duy nhất cho mỗi bucket (Hình 6-15).
+
+![](./assets/step3.png)
+
+Bước 4: Xây dựng cây hướng lên phía trên cho đến gốc bằng cách tính số băm con (Hình 6-16).
+
+![](./assets/step4.png)
+
+Để so sánh hai cây Merkle, hãy bắt đầu bằng cách so sánh các hàm băm gốc. Nếu hàm băm gốc khớp nhau, cả hai server đều có cùng dữ liệu. Nếu các hàm băm gốc không khớp, thì các hàm băm con bên trái được so sánh với các hàm băm con bên phải. Bạn có thể đi ngang qua cây để tìm bucket nào không được đồng bộ hóa và chỉ đồng bộ hóa các bucket đó.
+ 
+Sử dụng cây Merkle, lượng dữ liệu cần được đồng bộ hóa tỷ lệ thuận với sự khác biệt giữa hai bản sao chứ không phải lượng dữ liệu mà chúng chứa. Trong các hệ thống thế giới thực, kích thước bucket khá lớn. Ví dụ: một cấu hình có thể là một triệu
+bucket trên một tỷ khóa, vì vậy mỗi bucket sẽ chứa 1000 khóa.
+
+#### Xử lý sự cố trung tâm dữ liệu.
+
+Trung tâm dữ liệu ngừng hoạt động có thể xảy ra do mất điện, mất mạng, thiên tai, ... Để xây dựng một hệ thống có khả năng xử lý sự cố trung tâm dữ liệu, điều quan trọng là phải nhân rộng dữ liệu trên nhiều trung tâm dữ liệu. Ngay cả khi một trung tâm dữ liệu hoàn toàn ngoại tuyến, người dùng vẫn có thể truy cập dữ liệu thông qua các trung tâm dữ liệu khác.
+
+### Sơ đồ kiến trúc hệ thống
+
+Bây giờ chúng ta đã thảo luận về các cân nhắc kỹ thuật khác nhau trong việc thiết kế bộ lưu trữ key-value, chúng ta có thể chuyển trọng tâm sang sơ đồ kiến trúc, được thể hiện trong Hình 6-17.
+
+![](./assets/architecture.png)
+
+Các đặc điểm chính của kiến trúc được liệt kê như sau:
+* Client giao tiếp với bộ lưu trữ key-value thông qua các API đơn giản: get(key) và put(key, value).
+* Bộ điều phối là một nút hoạt động như một proxy giữa client và bộ lưu trữ key-value.
+* Các nút được phân phối trên một vòng bằng cách sử dụng băm nhất quán.
+* Hệ thống hoàn toàn phi tập trung nên việc thêm và di chuyển các nút có thể tự động.
+* Dữ liệu được sao chép tại nhiều nút.
+* Không có điểm lỗi nào vì mọi nút đều có cùng một bộ trách nhiệm.
+
+Khi thiết kế được phân cấp, mỗi nút thực hiện nhiều nhiệm vụ như được trình bày trong Hình 6-18.
+
+![](./assets/node.png)
+
+### Write path
+
+Hình 6-19 giải thích những gì xảy ra sau khi một yêu cầu ghi được chuyển hướng đến một nút cụ thể. Xin lưu ý rằng các thiết kế được đề xuất cho các đường dẫn ghi/đọc chủ yếu dựa trên kiến trúc của Cassandra [8].
+
+![](./assets/write.png)
+
+1. Yêu cầu ghi vẫn tồn tại trên file commit log.
+2. Dữ liệu được lưu trong bộ nhớ đệm.
+3. Khi bộ nhớ đệm đầy hoặc đạt đến ngưỡng xác định trước, dữ liệu sẽ được chuyển vào SSTable [9] trên đĩa. Lưu ý: Bảng chuỗi đã sắp xếp (SSTable) là danh sách các cặp `<key, value>` đã được sắp xếp. Bạn đọc muốn tìm hiểu thêm về SStable, có thể tham khảo tài liệu tham khảo [9].
+
+### Read path
+
+Sau khi một yêu cầu đọc được chuyển hướng đến một nút cụ thể, trước tiên nó sẽ kiểm tra xem dữ liệu có trong bộ nhớ đệm của bộ nhớ hay không. Nếu vậy, dữ liệu được trả lại cho client như trong Hình 6-20.
+
+![](./assets/read1.png)
+
+Nếu dữ liệu không có trong bộ nhớ, nó sẽ được truy xuất từ đĩa thay thế. Chúng ta cần một cách hiệu quả để tìm ra SSTable nào chứa khóa. Bộ lọc Bloom [10] thường được sử dụng để giải quyết vấn đề này.
+Đường dẫn đọc được thể hiện trong Hình 6-21 khi dữ liệu không có trong bộ nhớ.
+
+![](./assets/read2.png)
+
+1. Trước tiên, hệ thống sẽ kiểm tra xem dữ liệu có trong bộ nhớ hay không. Nếu không, hãy chuyển sang bước 2.
+2. Nếu dữ liệu không có trong bộ nhớ, hệ thống sẽ kiểm tra bộ lọc bloom.
+3. Bộ lọc bloom được sử dụng để tìm ra các SSTables nào có thể chứa khóa.
+4. SSTables trả về kết quả của tập dữ liệu.
+5. Kết quả của tập dữ liệu được trả lại cho client.
+
+## 4. Tổng kết
+
+Chương này bao gồm nhiều khái niệm và kỹ thuật. Để làm mới bộ nhớ của bạn, bảng sau đây tóm tắt các tính năng và kỹ thuật tương ứng được sử dụng cho một kho lưu trữ khóa-giá trị phân tán.
+
+| Mục tiêu/Vấn đề | Kỹ thuật |
+|-|-|
+| Khả năng lưu trữ dữ liệu lớn | Sử dụng băm nhất quán để trải đều tải qua nhiều server |
+| Khả năng đọc cao | Sao chép dữ liệu. Thiết lập đa trung tâm dữ liệu |
+| Khả năng viết cao | Versioning và xử lý xung đột với vector clocks |
+| Phân vùng tập dữ liệu | Băm nhất quán |
+| Khả năng mở rộng tăng dần | Băm nhất quán |
+| Tính bất đồng nhất | Băm nhất quán |
+| Điều chính tính nhất quán | Đồng thuận tối thiểu |
+| Xử lý failure tạm thời | Sloppy quorum và hinted handoff |
+| Xử lý failure vĩnh viễn | Cây markle |
+| Xử lý sự cố trung tâm dữ liệu | Sao chép trên nhiều trung tâm dữ liệu |
+
+# Tham khảo
+
+[1] Amazon DynamoDB: https://aws.amazon.com/dynamodb/
+
+[2] memcached: https://memcached.org/
+
+[3] Redis: https://redis.io/
+
+[4] Dynamo: Amazon’s Highly Available Key-value Store: https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf
+
+[5] Cassandra: https://cassandra.apache.org/
+
+[6] Bigtable: A Distributed Storage System for Structured Data: https://static.googleusercontent.com/media/research.google.com/en//archive/bigtableosdi06.pdf
+
+[7] Merkle tree: https://en.wikipedia.org/wiki/Merkle_tree
+
+[8] Cassandra architecture: https://cassandra.apache.org/doc/latest/architecture/
+
+[9] SStable: https://www.igvita.com/2012/02/06/sstable-and-log-structured-storage-leveldb/
+
+[10] Bloom filter https://en.wikipedia.org/wiki/Bloom_filter
