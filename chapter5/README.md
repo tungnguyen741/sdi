@@ -70,13 +70,13 @@ Một điều đáng nói là hàm băm được sử dụng ở đây khác v�
 
 Sử dụng logic được mô tả ở trên, việc thêm một server mới sẽ chỉ yêu cầu phân phối lại một phần nhỏ các khóa.
 
-Trong hình 5-8 dưới đây, sau khi server 4 mới được thêm vào, chỉ cần phân phối lại key0. k1, k2 và k3 vẫn trên cùng một server. Hãy xem xét kỹ lưỡng logic. Trước khi server 4 được thêm, key0 được lưu trữ trên server 0. Bây giờ, key0 sẽ được lưu trữ trên server 4 vì server 4 là server đầu tiên nó gặp phải bằng cách đi theo chiều kim đồng hồ từ vị trí của key0 trên vòng. Các khóa khác không được phân phối lại dựa trên thuật toán băm nhất quán.
+Trong hình 5-8 dưới đây, sau khi server 4 mới được thêm vào, chỉ cần phân phối lại key0. k1, k2 và k3 vẫn trên cùng một server. Hãy xem xét kỹ lưỡng logic. Trước khi server 4 được thêm, key0 được lưu trữ trên server 0. Bây giờ, key0 sẽ được lưu trữ trên server 4 vì server 4 là server đầu tiên nó gặp phải bằng cách đi theo chiều kim đồng hồ từ vị trí của key0 trên vòng. Các khóa khác không cần phân phối lại dựa trên thuật toán băm nhất quán.
 
 ![](./assets/add-server.png)
 
 ### Xoá server
 
-Khi server bị xóa, chỉ một phần nhỏ các khóa yêu cầu phân phối lại với hàm băm nhất quán. Trong hình 5-9, khi server 1 bị loại bỏ, chỉ key1 phải được ánh xạ lại server 2. Phần còn lại của các khóa không bị ảnh hưởng.
+Khi server bị xóa, chỉ một phần nhỏ các khóa yêu cầu phân phối lại với hàm băm nhất quán. Trong hình 5-9, khi server 1 bị loại bỏ, chỉ key1 được ánh xạ lại server 2. Phần còn lại của các khóa không bị ảnh hưởng.
 
 ![](./assets/remote-server.png)
 
@@ -139,7 +139,7 @@ Hàm băm nhất quán được sử dụng rộng rãi trong các hệ thống 
 * Mạng phân phối nội dung Akamai [6]
 * Bộ cân bằng tải mạng Maglev [7]
 
-Chúc mừng bạn đã đạt được điều này đến nay! Bây giờ hãy tự vỗ về lưng mình. Làm tốt lắm
+Chúc mừng bạn đã đạt được điều này đến nay! Bây giờ hãy tự vỗ về vai mình. Làm tốt lắm!
 
 # Tham khảo
 
